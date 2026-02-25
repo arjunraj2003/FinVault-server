@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const app_1 = __importDefault(require("./app"));
 const data_source_1 = require("./config/data-source");
-const redis_connet_1 = require("./config/redis-connet");
+// import { redisClient } from "./config/redis-connet";
 const PORT = 3000;
 async function startServer() {
     try {
@@ -13,8 +13,8 @@ async function startServer() {
         await data_source_1.AppDataSource.initialize();
         console.log("Database connected");
         // 2. Connect Redis
-        await redis_connet_1.redisClient.connect();
-        console.log("Redis connected");
+        // await redisClient.connect();
+        // console.log("Redis connected");
         // 3. Start server only after infra is ready
         app_1.default.listen(PORT, () => {
             console.log(`Server running at http://localhost:${PORT}`);

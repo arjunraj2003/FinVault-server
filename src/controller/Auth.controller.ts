@@ -3,7 +3,7 @@ import { UserService } from "../service/Auth.Service";
 import { AuthService } from "../utils/auth";
 import { ApiResponse } from "../utils/apiResponse";
 import { instanceToPlain } from "class-transformer";
-import { checkLoginAttempts, resetLoginAttempts } from "../service/AuthLimiter.service";
+// import { checkLoginAttempts, resetLoginAttempts } from "../service/AuthLimiter.service";
 
 
 export class AuthController {
@@ -52,7 +52,7 @@ export class AuthController {
                 sameSite: "lax",
                 maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
             });
-            await resetLoginAttempts(user.id);
+            // await resetLoginAttempts(user.id);
             return res.json(
                 new ApiResponse(true, "Login successful", {user:instanceToPlain(user), accessToken })
             );

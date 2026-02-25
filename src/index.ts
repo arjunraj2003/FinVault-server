@@ -1,6 +1,6 @@
 import app from "./app";
 import { AppDataSource } from "./config/data-source";
-import { redisClient } from "./config/redis-connet";
+// import { redisClient } from "./config/redis-connet";
 
 const PORT = 3000;
 
