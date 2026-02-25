@@ -11,8 +11,8 @@ async function startServer() {
     console.log("Database connected");
 
     // 2. Connect Redis
-    await redisClient.connect();
-    console.log("Redis connected");
+    // await redisClient.connect();
+    // console.log("Redis connected");
 
     // 3. Start server only after infra is ready
     app.listen(PORT, () => {

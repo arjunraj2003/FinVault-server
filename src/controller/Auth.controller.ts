@@ -34,10 +34,10 @@ export class AuthController {
             const user = await UserService.getUserByEmail(email);
             if (!user) throw new Error("Invalid credentials");
 
-            const limiter=await checkLoginAttempts(user.id);
-            if(limiter.blocked){
-                throw new Error(`Too many attempts. Try again in ${limiter.ttl} seconds.`)
-            }
+            // const limiter=await checkLoginAttempts(user.id);
+            // if(limiter.blocked){
+            //     throw new Error(`Too many attempts. Try again in ${limiter.ttl} seconds.`)
+            // }
 
             const isMatch = await AuthService.comparePassword(password, user.password);
             if (!isMatch) throw new Error("Invalid credentials");
