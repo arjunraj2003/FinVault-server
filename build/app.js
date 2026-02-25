@@ -16,7 +16,8 @@ const app = (0, express_1.default)();
 const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:8080',
-    'http://localhost:4173'
+    'http://localhost:4173',
+    'https://finvault-client.onrender.com'
 ];
 const corsOptions = {
     origin: (origin, callback) => {
