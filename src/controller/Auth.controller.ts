@@ -3,8 +3,15 @@ import { UserService } from "../service/Auth.Service";
 import { AuthService } from "../utils/auth";
 import { ApiResponse } from "../utils/apiResponse";
 import { instanceToPlain } from "class-transformer";
-// import { checkLoginAttempts, resetLoginAttempts } from "../service/AuthLimiter.service";
 
+const isProd = process.env.NODE_ENV === "production";
+
+const cookieOptions = {
+  httpOnly: true,
+  secure: isProd,              // true in production (HTTPS), false locally
+  sameSite: isProd ? "none" : "lax",   // "none" for cross-site in prod
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+} as const;
 
 export class AuthController {
 
@@ -16,12 +23,11 @@ export class AuthController {
             if (exists) throw new Error("Email already exists");
 
             const hashedPassword = await AuthService.hashPassword(password);
-
             const user = await UserService.createUser(name, email, hashedPassword);
 
             return res
                 .status(201)
-                .json(new ApiResponse(true, "User registered", instanceToPlain(user) ));
+                .json(new ApiResponse(true, "User registered", instanceToPlain(user)));
         } catch (err) {
             next(err);
         }
@@ -34,27 +40,16 @@ export class AuthController {
             const user = await UserService.getUserByEmail(email);
             if (!user) throw new Error("Invalid credentials");
 
-            // const limiter=await checkLoginAttempts(user.id);
-            // if(limiter.blocked){
-            //     throw new Error(`Too many attempts. Try again in ${limiter.ttl} seconds.`)
-            // }
-
             const isMatch = await AuthService.comparePassword(password, user.password);
             if (!isMatch) throw new Error("Invalid credentials");
 
             const accessToken = AuthService.generateAccessToken(user.id);
             const refreshToken = AuthService.generateRefreshToken(user.id);
 
-            // Store refreshToken in cookie
-            res.cookie("refreshToken", refreshToken, {
-                httpOnly: true,
-                secure: false,
-                sameSite: "lax",
-                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-            });
-            // await resetLoginAttempts(user.id);
+            res.cookie("refreshToken", refreshToken, cookieOptions);
+
             return res.json(
-                new ApiResponse(true, "Login successful", {user:instanceToPlain(user), accessToken })
+                new ApiResponse(true, "Login successful", { user: instanceToPlain(user), accessToken })
             );
         } catch (err) {
             next(err);
@@ -63,7 +58,7 @@ export class AuthController {
 
     static async logout(req: Request, res: Response, next: NextFunction) {
         try {
-            res.clearCookie("refreshToken");
+            res.clearCookie("refreshToken", cookieOptions); // ✅ pass same options so browser clears correctly
             return res.json(new ApiResponse(true, "Logged out"));
         } catch (err) {
             next(err);
@@ -76,7 +71,6 @@ export class AuthController {
             if (!token) throw new Error("No refresh token");
 
             const data = AuthService.verifyRefreshToken(token) as any;
-
             const accessToken = AuthService.generateAccessToken(data.userId);
 
             return res.json(
