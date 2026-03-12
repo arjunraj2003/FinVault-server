@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import app from "./app";
 import { AppDataSource } from "./config/data-source";
 // import { redisClient } from "./config/redis-connet";
