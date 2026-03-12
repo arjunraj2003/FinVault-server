@@ -6,6 +6,7 @@ import {
   OneToMany
 } from "typeorm";
 import { Account } from "./Account.entity";
+import { Budget } from "./Budget.entity";
 import { Exclude } from "class-transformer";
 
 
@@ -29,4 +30,7 @@ export class User {
 
     @OneToMany(() => Account, (account) => account.user, { cascade: true })
     accounts!: Account[];
+
+    @OneToMany(() => Budget, (budget) => budget.user, { cascade: true })
+    budgets!: Budget[];
 }

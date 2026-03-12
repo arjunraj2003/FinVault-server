@@ -18,16 +18,8 @@ export interface GetTransactionsQuery {
 }
 
 export class TransactionService {
-  /**
-   * Safely rounds a float to 2 decimal places using integer arithmetic
-   * to avoid JS floating point errors like 0.1 + 0.2 = 0.30000000000000004.
-   *
-   * All balance math must go through this function — never use raw JS addition
-   * on financial values.
-   */
+  
   private static toFinancialString(value: number): string {
-    // Multiply to cents (integer), round, then divide back.
-    // Math.round handles the midpoint correctly (e.g. 0.005 → 0.01).
     return (Math.round(value * 100) / 100).toFixed(2);
   }
 
@@ -39,9 +31,7 @@ export class TransactionService {
     description: string | undefined,
     transactionDate: Date
   ) {
-    // --- Service-level defensive guards ---
-    // The controller validates these too, but financial operations must
-    // never trust that upstream validation always runs (e.g. direct service calls).
+
     if (!Number.isFinite(amount) || amount <= 0) {
       throw new Error("Amount must be a finite positive number.");
     }
@@ -54,16 +44,6 @@ export class TransactionService {
       const accountRepo = manager.getRepository(Account);
       const transactionRepo = manager.getRepository(Transaction);
 
-      /**
-       * CRITICAL: pessimistic_write lock prevents race conditions.
-       *
-       * Without this, two concurrent debit requests can both read the same
-       * balance, both pass the "sufficient funds" check, and both deduct —
-       * resulting in a balance that goes negative or is simply wrong.
-       *
-       * The lock holds until the transaction commits, serialising all
-       * balance-affecting operations on this account.
-       */
       const account = await accountRepo.findOne({
         where: { id: accountId },
         lock: { mode: "pessimistic_write" },
@@ -102,7 +82,6 @@ export class TransactionService {
 
       const transaction = transactionRepo.create({
         type,
-        // Store the exact amount that was validated — not re-parsed from input.
         amount: TransactionService.toFinancialString(amount),
         category,
         description,
@@ -110,9 +89,6 @@ export class TransactionService {
         account,
       });
 
-      // Save account first so the balance is committed before the transaction
-      // record exists. If transactionRepo.save fails, the whole transaction
-      // rolls back atomically.
       await accountRepo.save(account);
       const savedTransaction = await transactionRepo.save(transaction);
 
@@ -200,18 +176,7 @@ export class TransactionService {
     if (!transactionId || !transactionId.trim()) {
       throw new Error("Transaction ID is required.");
     }
-
-    /**
-     * Refactored from manual queryRunner to AppDataSource.transaction for
-     * consistency with createTransaction. Both patterns are equivalent, but
-     * mixing them makes the codebase harder to reason about and audit.
-     */
     return await AppDataSource.transaction(async (manager) => {
-      /**
-       * CRITICAL: pessimistic_write lock on the transaction row and the
-       * account row prevents a race where two delete requests for the same
-       * transaction both read the same balance and apply the refund twice.
-       */
       const transaction = await manager.findOne(Transaction, {
         where: { id: transactionId },
         relations: ["account"],
@@ -238,25 +203,15 @@ export class TransactionService {
         );
       }
 
-      // Reverse the original operation:
-      // Original CREDIT added to balance  → reversal subtracts from balance.
-      // Original DEBIT  subtracted from balance → reversal adds back.
+     
       let newBalance: number;
 
       if (transaction.type === TransactionType.CREDIT) {
         newBalance = currentBalance - amount;
       } else {
-        // DEBIT reversal — always allow, even if it brings balance above original
-        // (the debit had reduced it, so restoring it is always safe).
         newBalance = currentBalance + amount;
       }
 
-      /**
-       * BUG FIX: was account.balance = currentBalance.toString()
-       * toString() on a float produces "100.30000000000004" which permanently
-       * corrupts the stored balance string.
-       * toFinancialString() uses integer-safe rounding before formatting.
-       */
       account.balance = TransactionService.toFinancialString(newBalance);
 
       await manager.save(account);

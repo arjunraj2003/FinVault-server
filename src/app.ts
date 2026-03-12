@@ -4,6 +4,7 @@ import authRoutes from './routes/auth.routes';
 import accountRoutes from './routes/account.routes';
 import transactionRoutes from './routes/transaction.routes';
 import dashboardRoutes from './routes/dashboard.routes';
+import budgetRoutes from './routes/budget.routes';
 import cookieParser from 'cookie-parser';
 import cors, { CorsOptions } from 'cors';
 import morgan from "morgan";
@@ -40,6 +41,7 @@ app.use('/api/v1/auth',authRoutes)
 app.use('/api/v1/account',accountRoutes)
 app.use('/api/v1/transaction',transactionRoutes)
 app.use('/api/v1/dashboard',dashboardRoutes)
+app.use('/api/v1/budget',budgetRoutes)
 app.use(errorHandler);
 
 export default app;
