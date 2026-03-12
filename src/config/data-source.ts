@@ -29,7 +29,7 @@ export const AppDataSource = new DataSource({
   ssl: {
     rejectUnauthorized: false,
   },
-  synchronize: false,
+  synchronize: true,
   logging: false,
   entities: [User, Account, Transaction, Budget],
   migrations: ["dist/migrations/*.js"],
