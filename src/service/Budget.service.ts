@@ -1,7 +1,7 @@
 import { AppDataSource } from "../config/data-source";
-import { Budget } from "../entity/Budget.entity";
-import { Transaction } from "../entity/Transaction.entity";
-import { User } from "../entity/User.entity";
+import { Budget } from "../entity/budget.entity";
+import { Transaction } from "../entity/transaction.entity";
+import { User } from "../entity/user.entity";
 import { Between } from "typeorm";
 
 interface CreateBudgetParams {

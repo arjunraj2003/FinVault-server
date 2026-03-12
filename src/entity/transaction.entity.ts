@@ -5,7 +5,7 @@ import {
     ManyToOne,
     PrimaryGeneratedColumn
 } from "typeorm";
-import { Account } from "./Account.entity";
+import { Account } from "./account.entity";
 import { TransactionCategory, TransactionType } from "../utils/transaction-category.enum";
 
 

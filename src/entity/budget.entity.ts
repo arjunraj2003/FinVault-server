@@ -5,7 +5,7 @@ import {
     ManyToOne,
     PrimaryGeneratedColumn
 } from "typeorm";
-import { User } from "./User.entity";
+import { User } from "./user.entity";
 import { TransactionCategory } from "../utils/transaction-category.enum";
 
 @Entity()

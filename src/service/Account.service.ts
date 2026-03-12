@@ -1,6 +1,6 @@
 import { AppDataSource } from "../config/data-source"
-import { Account, AccountType } from "../entity/Account.entity"
-import { User } from "../entity/User.entity"
+import { Account, AccountType } from "../entity/account.entity"
+import { User } from "../entity/user.entity"
 
 const accountRepo = AppDataSource.getRepository(Account)
 const userRepo = AppDataSource.getRepository(User)

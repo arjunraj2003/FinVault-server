@@ -5,8 +5,8 @@ import {
   CreateDateColumn,
   OneToMany
 } from "typeorm";
-import { Account } from "./Account.entity";
-import { Budget } from "./Budget.entity";
+import { Account } from "./account.entity";
+import { Budget } from "./budget.entity";
 import { Exclude } from "class-transformer";
 
 

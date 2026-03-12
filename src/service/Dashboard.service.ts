@@ -1,5 +1,5 @@
 import { AppDataSource } from "../config/data-source";
-import { Transaction } from "../entity/Transaction.entity";
+import { Transaction } from "../entity/transaction.entity";
 
 const transactionRepo = AppDataSource.getRepository(Transaction);
 

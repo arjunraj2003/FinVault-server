@@ -6,8 +6,8 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn
 } from "typeorm";
-import { User } from "./User.entity";
-import { Transaction } from "./Transaction.entity";
+import { User } from "./user.entity";
+import { Transaction } from "./transaction.entity";
 
 export enum AccountType {
   CHECKING = "checking",
