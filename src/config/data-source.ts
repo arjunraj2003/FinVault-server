@@ -31,5 +31,5 @@ export const AppDataSource = new DataSource({
   },
   synchronize: true,
   logging: false,
-  entities: [__dirname + "/../entity/*.{js,ts}"],
+  entities: [__dirname + "/../entity/*.js"],
 });

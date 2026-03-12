@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TransactionController = void 0;
 const Transaction_service_1 = require("../service/Transaction.service");
 const apiResponse_1 = require("../utils/apiResponse");
-const Transaction_entity_1 = require("../entity/Transaction.entity");
+const transaction_category_enum_1 = require("../utils/transaction-category.enum");
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -52,13 +52,13 @@ class TransactionController {
                     return;
             }
             // --- type ---
-            if (!type || !Object.values(Transaction_entity_1.TransactionType).includes(type)) {
-                if (badRequest(res, `type must be one of: ${Object.values(Transaction_entity_1.TransactionType).join(", ")}.`))
+            if (!type || !Object.values(transaction_category_enum_1.TransactionType).includes(type)) {
+                if (badRequest(res, `type must be one of: ${Object.values(transaction_category_enum_1.TransactionType).join(", ")}.`))
                     return;
             }
             // --- category ---
-            if (!category || !Object.values(Transaction_entity_1.TransactionCategory).includes(category)) {
-                if (badRequest(res, `category must be one of: ${Object.values(Transaction_entity_1.TransactionCategory).join(", ")}.`))
+            if (!category || !Object.values(transaction_category_enum_1.TransactionCategory).includes(category)) {
+                if (badRequest(res, `category must be one of: ${Object.values(transaction_category_enum_1.TransactionCategory).join(", ")}.`))
                     return;
             }
             // --- transactionDate ---
@@ -101,13 +101,13 @@ class TransactionController {
                     return;
             }
             // --- optional type filter ---
-            if (rawType !== undefined && !Object.values(Transaction_entity_1.TransactionType).includes(rawType)) {
-                if (badRequest(res, `type must be one of: ${Object.values(Transaction_entity_1.TransactionType).join(", ")}.`))
+            if (rawType !== undefined && !Object.values(transaction_category_enum_1.TransactionType).includes(rawType)) {
+                if (badRequest(res, `type must be one of: ${Object.values(transaction_category_enum_1.TransactionType).join(", ")}.`))
                     return;
             }
             // --- optional category filter ---
-            if (rawCategory !== undefined && !Object.values(Transaction_entity_1.TransactionCategory).includes(rawCategory)) {
-                if (badRequest(res, `category must be one of: ${Object.values(Transaction_entity_1.TransactionCategory).join(", ")}.`))
+            if (rawCategory !== undefined && !Object.values(transaction_category_enum_1.TransactionCategory).includes(rawCategory)) {
+                if (badRequest(res, `category must be one of: ${Object.values(transaction_category_enum_1.TransactionCategory).join(", ")}.`))
                     return;
             }
             // --- date range: require both or neither ---

@@ -6,9 +6,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const bcrypt_1 = __importDefault(require("bcrypt"));
-const User_entity_1 = require("../entity/User.entity");
+const user_entity_1 = require("../entity/user.entity");
 const data_source_1 = require("../config/data-source");
-const userRepo = data_source_1.AppDataSource.getRepository(User_entity_1.User);
+const userRepo = data_source_1.AppDataSource.getRepository(user_entity_1.User);
 class AuthService {
     static async hashPassword(password) {
         return bcrypt_1.default.hash(password, 10);

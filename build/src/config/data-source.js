@@ -6,10 +6,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppDataSource = void 0;
 const typeorm_1 = require("typeorm");
 const dotenv_1 = __importDefault(require("dotenv"));
-const User_entity_1 = require("../entity/User.entity");
-const Account_entity_1 = require("../entity/Account.entity");
-const Transaction_entity_1 = require("../entity/Transaction.entity");
-const Budget_entity_1 = require("../entity/Budget.entity");
 dotenv_1.default.config();
 // export const AppDataSource = new DataSource({
 //     type: "postgres",
@@ -28,9 +24,8 @@ exports.AppDataSource = new typeorm_1.DataSource({
     ssl: {
         rejectUnauthorized: false,
     },
-    synchronize: false,
+    synchronize: true,
     logging: false,
-    entities: [User_entity_1.User, Account_entity_1.Account, Transaction_entity_1.Transaction, Budget_entity_1.Budget],
-    migrations: ["dist/migrations/*.js"],
+    entities: [__dirname + "/../entity/*.js"],
 });
 //# sourceMappingURL=data-source.js.map

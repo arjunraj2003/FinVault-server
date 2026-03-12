@@ -2,15 +2,15 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BudgetService = void 0;
 const data_source_1 = require("../config/data-source");
-const Budget_entity_1 = require("../entity/Budget.entity");
-const Transaction_entity_1 = require("../entity/Transaction.entity");
-const User_entity_1 = require("../entity/User.entity");
+const budget_entity_1 = require("../entity/budget.entity");
+const transaction_entity_1 = require("../entity/transaction.entity");
+const user_entity_1 = require("../entity/user.entity");
 const typeorm_1 = require("typeorm");
 class BudgetService {
     constructor() {
-        this.budgetRepository = data_source_1.AppDataSource.getRepository(Budget_entity_1.Budget);
-        this.transactionRepository = data_source_1.AppDataSource.getRepository(Transaction_entity_1.Transaction);
-        this.userRepository = data_source_1.AppDataSource.getRepository(User_entity_1.User);
+        this.budgetRepository = data_source_1.AppDataSource.getRepository(budget_entity_1.Budget);
+        this.transactionRepository = data_source_1.AppDataSource.getRepository(transaction_entity_1.Transaction);
+        this.userRepository = data_source_1.AppDataSource.getRepository(user_entity_1.User);
     }
     async createBudget(data) {
         const user = await this.userRepository.findOne({ where: { id: data.userId } });

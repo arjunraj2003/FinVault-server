@@ -2,8 +2,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TransactionService = void 0;
 const data_source_1 = require("../config/data-source");
-const Account_entity_1 = require("../entity/Account.entity");
-const Transaction_entity_1 = require("../entity/Transaction.entity");
+const account_entity_1 = require("../entity/account.entity");
+const transaction_entity_1 = require("../entity/transaction.entity");
+const transaction_category_enum_1 = require("../utils/transaction-category.enum");
 class TransactionService {
     static toFinancialString(value) {
         return (Math.round(value * 100) / 100).toFixed(2);
@@ -16,8 +17,8 @@ class TransactionService {
             throw new Error("Account ID is required.");
         }
         return await data_source_1.AppDataSource.transaction(async (manager) => {
-            const accountRepo = manager.getRepository(Account_entity_1.Account);
-            const transactionRepo = manager.getRepository(Transaction_entity_1.Transaction);
+            const accountRepo = manager.getRepository(account_entity_1.Account);
+            const transactionRepo = manager.getRepository(transaction_entity_1.Transaction);
             const account = await accountRepo.findOne({
                 where: { id: accountId },
                 lock: { mode: "pessimistic_write" },
@@ -33,7 +34,7 @@ class TransactionService {
                 throw new Error(`Account ${accountId} has a corrupt balance value: "${account.balance}".`);
             }
             let newBalance;
-            if (type === Transaction_entity_1.TransactionType.CREDIT) {
+            if (type === transaction_category_enum_1.TransactionType.CREDIT) {
                 newBalance = currentBalance + amount;
             }
             else {
@@ -72,7 +73,7 @@ class TransactionService {
         if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
             throw new Error("limit must be an integer between 1 and 100.");
         }
-        const qb = data_source_1.AppDataSource.getRepository(Transaction_entity_1.Transaction)
+        const qb = data_source_1.AppDataSource.getRepository(transaction_entity_1.Transaction)
             .createQueryBuilder("transaction")
             .leftJoinAndSelect("transaction.account", "account");
         if (accountId) {
@@ -114,7 +115,7 @@ class TransactionService {
             throw new Error("Transaction ID is required.");
         }
         return await data_source_1.AppDataSource.transaction(async (manager) => {
-            const transaction = await manager.findOne(Transaction_entity_1.Transaction, {
+            const transaction = await manager.findOne(transaction_entity_1.Transaction, {
                 where: { id: transactionId },
                 relations: ["account"],
                 lock: { mode: "pessimistic_write" },
@@ -132,7 +133,7 @@ class TransactionService {
                 throw new Error(`Transaction has a corrupt amount value: "${transaction.amount}".`);
             }
             let newBalance;
-            if (transaction.type === Transaction_entity_1.TransactionType.CREDIT) {
+            if (transaction.type === transaction_category_enum_1.TransactionType.CREDIT) {
                 newBalance = currentBalance - amount;
             }
             else {

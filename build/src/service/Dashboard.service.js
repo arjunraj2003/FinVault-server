@@ -2,8 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DashboardService = void 0;
 const data_source_1 = require("../config/data-source");
-const Transaction_entity_1 = require("../entity/Transaction.entity");
-const transactionRepo = data_source_1.AppDataSource.getRepository(Transaction_entity_1.Transaction);
+const transaction_entity_1 = require("../entity/transaction.entity");
+const transactionRepo = data_source_1.AppDataSource.getRepository(transaction_entity_1.Transaction);
 class DashboardService {
     static async getDashboardSummary(accountId, year) {
         // 1️⃣ Monthly Income vs Expense

@@ -2,10 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AccountService = void 0;
 const data_source_1 = require("../config/data-source");
-const Account_entity_1 = require("../entity/Account.entity");
-const User_entity_1 = require("../entity/User.entity");
-const accountRepo = data_source_1.AppDataSource.getRepository(Account_entity_1.Account);
-const userRepo = data_source_1.AppDataSource.getRepository(User_entity_1.User);
+const account_entity_1 = require("../entity/account.entity");
+const user_entity_1 = require("../entity/user.entity");
+const accountRepo = data_source_1.AppDataSource.getRepository(account_entity_1.Account);
+const userRepo = data_source_1.AppDataSource.getRepository(user_entity_1.User);
 class AccountService {
     static async createAccount(userId, name, type, balance) {
         const user = await userRepo.findOne({ where: { id: userId } });
