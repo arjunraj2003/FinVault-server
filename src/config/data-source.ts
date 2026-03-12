@@ -32,5 +32,5 @@ export const AppDataSource = new DataSource({
   synchronize: true,
   logging: false,
   entities: [User, Account, Transaction, Budget],
-  migrations: ["dist/migrations/*.js"],
+  migrations: ["build/migrations/*.js"],
 });
