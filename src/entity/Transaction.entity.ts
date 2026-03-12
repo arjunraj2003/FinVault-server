@@ -6,25 +6,8 @@ import {
     PrimaryGeneratedColumn
 } from "typeorm";
 import { Account } from "./Account.entity";
+import { TransactionCategory, TransactionType } from "../utils/transaction-category.enum";
 
-export enum TransactionCategory {
-    FOOD = "food",
-    RENT = "rent",
-    SALARY = "salary",
-    TRANSPORT = "transport",
-    SHOPPING = "shopping",
-    UTILITIES = "utilities",
-    ENTERTAINMENT = "entertainment",
-    INVESTMENT = "investment",
-    HEALTH ="health",
-    OTHER = "other",
-}
-
-
-export enum TransactionType {
-    CREDIT = "credit",
-    DEBIT = "debit"
-}
 
 @Entity()
 export class Transaction {

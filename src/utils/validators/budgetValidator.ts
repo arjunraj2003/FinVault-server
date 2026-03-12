@@ -1,5 +1,5 @@
 import Joi from "joi";
-import { TransactionCategory } from "../../entity/Transaction.entity";
+import { TransactionCategory } from "../transaction-category.enum";
 
 export const createBudgetSchema = Joi.object({
     amount: Joi.number().positive().required(),

@@ -1,10 +1,8 @@
 import { AppDataSource } from "../config/data-source";
 import { Account } from "../entity/Account.entity";
-import {
-  Transaction,
-  TransactionType,
-  TransactionCategory,
-} from "../entity/Transaction.entity";
+import { Transaction } from "../entity/Transaction.entity";
+import { TransactionCategory, TransactionType } from "../utils/transaction-category.enum";
+
 
 export interface GetTransactionsQuery {
   page: number;

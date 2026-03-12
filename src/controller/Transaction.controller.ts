@@ -4,10 +4,8 @@ import {
   GetTransactionsQuery,
 } from "../service/Transaction.service";
 import { ApiResponse } from "../utils/apiResponse";
-import {
-  TransactionType,
-  TransactionCategory,
-} from "../entity/Transaction.entity";
+import { TransactionCategory, TransactionType } from "../utils/transaction-category.enum";
+
 
 // ---------------------------------------------------------------------------
 // Request body / query shapes

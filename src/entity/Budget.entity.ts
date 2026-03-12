@@ -6,7 +6,7 @@ import {
     PrimaryGeneratedColumn
 } from "typeorm";
 import { User } from "./User.entity";
-import { TransactionCategory } from "./Transaction.entity";
+import { TransactionCategory } from "../utils/transaction-category.enum";
 
 @Entity()
 export class Budget {
