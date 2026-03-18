@@ -8,11 +8,11 @@ const router = Router();
 
 router.use(authenticate);
 
-router.post("/", validateBody(createBudgetSchema), BudgetController.createBudget);
-router.get("/", BudgetController.getBudgets);
-router.get("/progress/:id", BudgetController.getBudgetProgress);
-router.get("/:id", BudgetController.getBudgetById);
-router.put("/:id", validateBody(updateBudgetSchema), BudgetController.updateBudget);
-router.delete("/:id", BudgetController.deleteBudget);
+router.post("/", authenticate,validateBody(createBudgetSchema), BudgetController.createBudget);
+router.get("/", authenticate,BudgetController.getBudgets);
+router.get("/progress/:id",authenticate, BudgetController.getBudgetProgress);
+router.get("/:id",authenticate, BudgetController.getBudgetById);
+router.put("/:id", authenticate,validateBody(updateBudgetSchema), BudgetController.updateBudget);
+router.delete("/:id",authenticate, BudgetController.deleteBudget);
 
 export default router;

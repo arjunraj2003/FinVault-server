@@ -20,6 +20,9 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
     try {
         const token = authHeader.split(" ")[1];
         const decoded = verifyAccessToken(token);
+         console.log("=== AUTH DEBUG ===");
+        console.log("decoded:", JSON.stringify(decoded));
+        console.log("==================");
         if(!decoded){
             return next(new ApiError('Invalid or expired token', 401))
         }

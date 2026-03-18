@@ -4,6 +4,7 @@ import { User } from "../entity/user.entity";
 import { Account } from "../entity/account.entity";
 import { Transaction } from "../entity/transaction.entity";
 import { Budget } from "../entity/budget.entity";
+import { TransactionCategory } from "../entity/TransactionCategory.entity";
 dotenv.config();
 
 
@@ -19,7 +20,7 @@ dotenv.config();
 //     synchronize: true,
 //     logging: false,
 
-//     entities: [User,Account,Transaction,Budget],
+//     entities: [User,Account,Transaction,Budget,TransactionCategory],
 // });
 
 
@@ -29,7 +30,7 @@ export const AppDataSource = new DataSource({
   ssl: {
     rejectUnauthorized: false,
   },
-  synchronize: true,
+  synchronize: process.env.NODE_ENV !== "production",
   logging: false,
-  entities: [User,Account,Transaction,Budget],
+  entities: [User,Account,Transaction,Budget,TransactionCategory],
 });

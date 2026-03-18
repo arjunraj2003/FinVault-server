@@ -2,11 +2,13 @@ import {
     Column,
     CreateDateColumn,
     Entity,
+    JoinColumn,
     ManyToOne,
     PrimaryGeneratedColumn
 } from "typeorm";
 import { User } from "./user.entity";
-import { TransactionCategory } from "../utils/transaction-category.enum";
+import { TransactionCategory } from "./TransactionCategory.entity";
+
 
 @Entity()
 export class Budget {
@@ -16,7 +18,8 @@ export class Budget {
     @Column({ type: "decimal", precision: 12, scale: 2 })
     amount!: string;
 
-    @Column({ type: "enum", enum: TransactionCategory })
+    @ManyToOne(() => TransactionCategory, { eager: false, nullable: false })
+    @JoinColumn({ name: "category_id" })
     category!: TransactionCategory;
 
     @Column({ type: "date" })

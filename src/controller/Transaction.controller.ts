@@ -4,7 +4,7 @@ import {
   GetTransactionsQuery,
 } from "../service/Transaction.service";
 import { ApiResponse } from "../utils/apiResponse";
-import { TransactionCategory, TransactionType } from "../utils/transaction-category.enum";
+import { TransactionType } from "../utils/transaction-category.enum";
 
 
 // ---------------------------------------------------------------------------
@@ -15,7 +15,7 @@ interface CreateTransactionBody {
   type: TransactionType;
   amount: number | string; // comes in as string from JSON body — we coerce safely
   accountId: string;
-  category: TransactionCategory;
+  categoryId: string;
   description?: string;
   transactionDate: string;
 }
@@ -25,7 +25,7 @@ interface RawGetTransactionsQuery {
   page?: string;
   limit?: string;
   type?: string;
-  category?: string;
+  categoryId?: string;
   accountId?: string;
   search?: string;
   startDate?: string;
@@ -77,7 +77,7 @@ export class TransactionController {
         type,
         amount,
         accountId,
-        category,
+        categoryId,
         description,
         transactionDate,
       } = req.body;
@@ -103,10 +103,9 @@ export class TransactionController {
       }
 
       // --- category ---
-      if (!category || !Object.values(TransactionCategory).includes(category)) {
-        if (badRequest(res, `category must be one of: ${Object.values(TransactionCategory).join(", ")}.`)) return;
+      if (!categoryId || typeof categoryId !== "string" || !categoryId.trim()) {
+        if (badRequest(res, "categoryId is required.")) return;
       }
-
       // --- transactionDate ---
       // Original code only checked for presence, not validity.
       // new Date("not-a-date") produces Invalid Date with no error thrown —
@@ -124,7 +123,7 @@ export class TransactionController {
         type,
         amt,
         accountId.trim(),
-        category,
+        categoryId,
         description?.trim() || undefined,
         parsedDate
       );
@@ -147,7 +146,7 @@ export class TransactionController {
         page: rawPage = "1",
         limit: rawLimit = "10",
         type: rawType,
-        category: rawCategory,
+        categoryId: rawCategory,
         accountId,
         search,
         startDate,
@@ -174,8 +173,8 @@ export class TransactionController {
       }
 
       // --- optional category filter ---
-      if (rawCategory !== undefined && !Object.values(TransactionCategory).includes(rawCategory as TransactionCategory)) {
-        if (badRequest(res, `category must be one of: ${Object.values(TransactionCategory).join(", ")}.`)) return;
+      if (rawCategory !== undefined && !rawCategory.trim()) {
+        if (badRequest(res, "categoryId must be a non-empty string.")) return;
       }
 
       // --- date range: require both or neither ---
@@ -204,7 +203,7 @@ export class TransactionController {
         page: page as number,
         limit: limit as number,
         type: rawType as TransactionType | undefined,
-        category: rawCategory as TransactionCategory | undefined,
+        categoryId: rawCategory,
         accountId,
         search,
         startDate,
@@ -239,6 +238,7 @@ export class TransactionController {
       res.status(200).json(new ApiResponse(true, result.message));
     } catch (error) {
       next(error);
+      console.log(error)
     }
   }
 }

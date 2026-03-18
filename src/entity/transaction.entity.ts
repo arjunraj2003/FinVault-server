@@ -2,11 +2,14 @@ import {
     Column,
     CreateDateColumn,
     Entity,
+    JoinColumn,
     ManyToOne,
     PrimaryGeneratedColumn
 } from "typeorm";
 import { Account } from "./account.entity";
-import { TransactionCategory, TransactionType } from "../utils/transaction-category.enum";
+import { TransactionType } from "../utils/transaction-category.enum";
+import { TransactionCategory } from "./TransactionCategory.entity";
+
 
 
 @Entity()
@@ -20,7 +23,8 @@ export class Transaction {
     @Column({ type: "decimal", precision: 12, scale: 2 })
     amount!: string; // decimal values return as strings
 
-    @Column({ type: 'enum', enum: TransactionCategory })
+    @ManyToOne(() => TransactionCategory, { eager: false, nullable: false })
+    @JoinColumn({ name: 'category_id' })
     category!: TransactionCategory;
 
     @Column({ nullable: true })
@@ -31,6 +35,9 @@ export class Transaction {
 
     @Column({ type: "date" })
     transactionDate!: Date;
+
+    @Column({ name: "accountId" })
+    accountId!: string;  // ✅ exposes the FK column directly — no cast needed
 
     @ManyToOne(() => Account, (account) => account.transactions, {
         onDelete: "CASCADE"

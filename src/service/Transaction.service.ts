@@ -1,14 +1,15 @@
 import { AppDataSource } from "../config/data-source";
 import { Account } from "../entity/account.entity";
 import { Transaction } from "../entity/transaction.entity";
-import { TransactionCategory, TransactionType } from "../utils/transaction-category.enum";
+import { TransactionCategory } from "../entity/TransactionCategory.entity";
+import { TransactionType } from "../utils/transaction-category.enum";
 
 
 export interface GetTransactionsQuery {
   page: number;
   limit: number;
   type?: TransactionType;
-  category?: TransactionCategory;
+  categoryId?: string;
   accountId?: string;
   search?: string;
   startDate?: string;
@@ -16,7 +17,7 @@ export interface GetTransactionsQuery {
 }
 
 export class TransactionService {
-  
+
   private static toFinancialString(value: number): string {
     return (Math.round(value * 100) / 100).toFixed(2);
   }
@@ -25,7 +26,7 @@ export class TransactionService {
     type: TransactionType,
     amount: number,
     accountId: string,
-    category: TransactionCategory,
+    categoryId: string,
     description: string | undefined,
     transactionDate: Date
   ) {
@@ -77,6 +78,11 @@ export class TransactionService {
 
       // Use integer-safe rounding — never raw toFixed() on a float result.
       account.balance = TransactionService.toFinancialString(newBalance);
+      const categoryRepo = manager.getRepository(TransactionCategory);
+      const category = await categoryRepo.findOne({ where: { id: categoryId, isActive: true } });
+      if (!category) {
+        throw new Error(`Category with id ${categoryId} not found.`);
+      }
 
       const transaction = transactionRepo.create({
         type,
@@ -102,7 +108,7 @@ export class TransactionService {
       page,
       limit,
       type,
-      category,
+      categoryId,
       accountId,
       search,
       startDate,
@@ -121,7 +127,8 @@ export class TransactionService {
 
     const qb = AppDataSource.getRepository(Transaction)
       .createQueryBuilder("transaction")
-      .leftJoinAndSelect("transaction.account", "account");
+      .leftJoinAndSelect("transaction.account", "account")
+      .leftJoinAndSelect("transaction.category", "category");
 
     if (accountId) {
       qb.andWhere("account.id = :accountId", { accountId });
@@ -131,8 +138,8 @@ export class TransactionService {
       qb.andWhere("transaction.type = :type", { type });
     }
 
-    if (category) {
-      qb.andWhere("transaction.category = :category", { category });
+    if (categoryId) {
+      qb.andWhere("category.id = :categoryId", { categoryId });
     }
 
     if (search) {
@@ -170,52 +177,68 @@ export class TransactionService {
     };
   }
 
-  static async deleteTransaction(transactionId: string) {
-    if (!transactionId || !transactionId.trim()) {
-      throw new Error("Transaction ID is required.");
-    }
-    return await AppDataSource.transaction(async (manager) => {
-      const transaction = await manager.findOne(Transaction, {
-        where: { id: transactionId },
-        relations: ["account"],
-        lock: { mode: "pessimistic_write" },
-      });
-
-      if (!transaction) {
-        throw new Error("Transaction not found.");
-      }
-
-      const account = transaction.account;
-
-      const currentBalance = Number(account.balance);
-      if (isNaN(currentBalance)) {
-        throw new Error(
-          `Account has a corrupt balance value: "${account.balance}".`
-        );
-      }
-
-      const amount = Number(transaction.amount);
-      if (isNaN(amount)) {
-        throw new Error(
-          `Transaction has a corrupt amount value: "${transaction.amount}".`
-        );
-      }
-
-     
-      let newBalance: number;
-
-      if (transaction.type === TransactionType.CREDIT) {
-        newBalance = currentBalance - amount;
-      } else {
-        newBalance = currentBalance + amount;
-      }
-
-      account.balance = TransactionService.toFinancialString(newBalance);
-
-      await manager.save(account);
-      await manager.remove(transaction);
-
-      return { message: "Transaction deleted successfully." };
-    });
+static async deleteTransaction(transactionId: string) {
+  if (!transactionId || !transactionId.trim()) {
+    throw new Error("Transaction ID is required.");
   }
+
+  return await AppDataSource.transaction(async (manager) => {
+
+    // Step 1: fetch transaction with NO lock first — just to get accountId
+    const transactionPlain = await manager.findOne(Transaction, {
+      where: { id: transactionId },
+    });
+
+    if (!transactionPlain) {
+      throw new Error("Transaction not found.");
+    }
+
+    // Step 2: get accountId directly from the FK column
+    const accountId = (transactionPlain as any).accountId;  // ✅ raw FK column
+
+    // Step 3: lock account row separately
+    const account = await manager.findOne(Account, {
+      where: { id: accountId },
+      lock: { mode: "pessimistic_write" },
+    });
+
+    if (!account) {
+      throw new Error("Account not found.");
+    }
+
+    // Step 4: now lock the transaction row separately
+    const transaction = await manager.findOne(Transaction, {
+      where: { id: transactionId },
+      lock: { mode: "pessimistic_write" },
+    });
+
+    if (!transaction) {
+      throw new Error("Transaction not found.");
+    }
+
+    const currentBalance = Number(account.balance);
+    if (isNaN(currentBalance)) {
+      throw new Error(`Account has a corrupt balance value: "${account.balance}".`);
+    }
+
+    const amount = Number(transaction.amount);
+    if (isNaN(amount)) {
+      throw new Error(`Transaction has a corrupt amount value: "${transaction.amount}".`);
+    }
+
+    let newBalance: number;
+    if (transaction.type === TransactionType.CREDIT) {
+      newBalance = currentBalance - amount;
+    } else {
+      newBalance = currentBalance + amount;
+    }
+
+    account.balance = TransactionService.toFinancialString(newBalance);
+
+    await manager.save(account);
+    await manager.remove(transaction);
+
+    return { message: "Transaction deleted successfully." };
+  });
+}
 }

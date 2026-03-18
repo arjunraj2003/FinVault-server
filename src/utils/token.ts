@@ -12,7 +12,7 @@ const REFRESH_SECRET = process.env.REFRESH_SECRET
 export const generateAccessToken = (payload: Object) => {
     try {
 
-        return jwt.sign(payload, JWT_SECRET, { expiresIn: '1d' })
+        return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' })
     } catch (error) {
         console.log(error);
 
