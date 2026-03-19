@@ -21,7 +21,7 @@ dotenv.config();
 //     logging: false,
 
 //     entities: [User,Account,Transaction,Budget,TransactionCategory],
-// });
+// })
 
 
 export const AppDataSource = new DataSource({

@@ -10,7 +10,7 @@ export class DashboardService {
     // 1️⃣ Monthly Income vs Expense
     const monthlyRaw = await transactionRepo
       .createQueryBuilder("t")
-      .select("EXTRACT(MONTH FROM t.createdAt)", "month")
+      .select("EXTRACT(MONTH FROM t.transactionDate)", "month") // ✅ use transactionDate not createdAt
       .addSelect(
         `SUM(CASE WHEN t.type = 'credit' THEN t.amount ELSE 0 END)`,
         "income"
@@ -20,7 +20,7 @@ export class DashboardService {
         "expense"
       )
       .where("t.accountId = :accountId", { accountId })
-      .andWhere("EXTRACT(YEAR FROM t.createdAt) = :year", { year })
+      .andWhere("EXTRACT(YEAR FROM t.transactionDate) = :year", { year }) // ✅ transactionDate
       .groupBy("month")
       .orderBy("month", "ASC")
       .getRawMany();
@@ -47,7 +47,7 @@ export class DashboardService {
       .select("SUM(t.amount)", "total")
       .where("t.accountId = :accountId", { accountId })
       .andWhere("t.type = 'credit'")
-      .andWhere("EXTRACT(YEAR FROM t.createdAt) = :year", { year })
+      .andWhere("EXTRACT(YEAR FROM t.transactionDate) = :year", { year }) // ✅ transactionDate
       .getRawOne();
 
     const totalIncome = Number(totalIncomeRaw.total || 0);
@@ -58,20 +58,21 @@ export class DashboardService {
       .select("SUM(t.amount)", "total")
       .where("t.accountId = :accountId", { accountId })
       .andWhere("t.type = 'debit'")
-      .andWhere("EXTRACT(YEAR FROM t.createdAt) = :year", { year })
+      .andWhere("EXTRACT(YEAR FROM t.transactionDate) = :year", { year }) // ✅ transactionDate
       .getRawOne();
 
     const totalExpense = Number(totalExpenseRaw.total || 0);
 
-    // 4️⃣ Category-wise Expense Breakdown
+    // 4️⃣ Category-wise Expense Breakdown ✅ JOIN transaction_category
     const categoryBreakdown = await transactionRepo
       .createQueryBuilder("t")
-      .select("t.category", "category")
+      .select("tc.name", "category")             // ✅ tc.name instead of t.category
       .addSelect("SUM(t.amount)", "total")
+      .leftJoin("t.category", "tc")              // ✅ join relation
       .where("t.accountId = :accountId", { accountId })
       .andWhere("t.type = 'debit'")
-      .andWhere("EXTRACT(YEAR FROM t.createdAt) = :year", { year })
-      .groupBy("t.category")
+      .andWhere("EXTRACT(YEAR FROM t.transactionDate) = :year", { year }) // ✅ transactionDate
+      .groupBy("tc.name")                        // ✅ group by tc.name
       .orderBy("total", "DESC")
       .getRawMany();
 
