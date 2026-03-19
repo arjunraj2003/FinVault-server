@@ -3,14 +3,14 @@ import { TransactionCategory } from "../transaction-category.enum";
 
 export const createBudgetSchema = Joi.object({
     amount: Joi.number().positive().required(),
-    category: Joi.string().valid(...Object.values(TransactionCategory)).required(),
+    categoryId: Joi.string().required(),
     startDate: Joi.date().iso().required(),
     endDate: Joi.date().iso().min(Joi.ref('startDate')).required()
 });
 
 export const updateBudgetSchema = Joi.object({
     amount: Joi.number().positive().optional(),
-    category: Joi.string().valid(...Object.values(TransactionCategory)).optional(),
+    categoryId: Joi.string().optional(),
     startDate: Joi.date().iso().optional(),
     endDate: Joi.date().iso().min(Joi.ref('startDate')).optional()
 });

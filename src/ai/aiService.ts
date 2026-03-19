@@ -8,9 +8,12 @@ const aiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+// ✅ Update interface to include explanation for non-finance intents
 export interface AIQueryPass1Response {
-  sql: string;
+  sql: string | null;        // ✅ can be null for greetings
   rag_context: string;
+  explanation?: string;      // ✅ present when intent is not finance
+  intent?: string;           // ✅ optional intent field
 }
 
 export interface AIQueryPass2Response {

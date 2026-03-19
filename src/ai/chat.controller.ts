@@ -90,60 +90,71 @@ function detectCategory(question: string): string | undefined {
 }
 
 export class ChatController {
-
     static async chat(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { question } = req.body;
             const userId = (req as any).user.userId;
 
-            // ── Validation ────────────────────────────────────────────────
             if (!question || typeof question !== "string" || !question.trim()) {
                 res.status(400).json(new ApiResponse(false, "question is required.", null));
                 return;
             }
 
+            // ── Pass 1: Generate SQL ───────────────────────────────────────
+            const pass1 = await generateSQL(question.trim(), userId);
+
+            // ✅ If AI service handled it directly (greeting/unknown intent)
+            // sql will be null and explanation will be present
+            if (!pass1.sql && pass1.explanation) {
+                res.status(200).json(new ApiResponse(true, "Chat response generated successfully", {
+                    question,
+                    sql: null,
+                    results: [],
+                    explanation: pass1.explanation,
+                }));
+                return;
+            }
+
             // ── Detect category from question ──────────────────────────────
             const mentionedCategory = detectCategory(question);
-            console.log("Detected category:", mentionedCategory);
 
-            // ── Pass 1: Generate SQL ───────────────────────────────────────
-            const { sql, rag_context } = await generateSQL(question.trim(), userId);
+            console.log(mentionedCategory,"---cate--->")
 
             // ── Execute SQL ────────────────────────────────────────────────
             let results: Record<string, unknown>[] = [];
             let sqlError: string | undefined;
 
             try {
-                results = await safeAIQuery(AppDataSource, sql);
+                results = await safeAIQuery(AppDataSource, pass1.sql);
             } catch (err) {
                 sqlError = (err as Error).message;
             }
 
             // ── Fetch budget context only if category detected ─────────────
             let budgetContext: Record<string, unknown>[] = [];
-
             if (mentionedCategory) {
                 try {
                     budgetContext = await AppDataSource.query(`
                         SELECT
-                            b.category,
+                            tc.name AS category,
                             b.amount AS budget_limit,
                             b."startDate",
                             b."endDate",
                             COALESCE(SUM(t.amount), 0) AS total_spent,
                             b.amount - COALESCE(SUM(t.amount), 0) AS remaining
                         FROM budget b
+                        JOIN transaction_category tc ON tc.id = b.category_id
                         LEFT JOIN account a ON a."userId" = b."userId"
                         LEFT JOIN transaction t
                             ON t."accountId" = a.id
-                            AND t.type::TEXT = 'debit'
-                            AND t.category::TEXT = b.category::TEXT
+                            AND t.type = 'debit'
+                            AND t.category_id = b.category_id
                             AND t."transactionDate" BETWEEN b."startDate" AND b."endDate"
-                        WHERE b."userId" = '${userId}'
-                          AND b.category::TEXT = '${mentionedCategory}'
+                        WHERE b."userId" = $1
+                          AND LOWER(tc.name) = $2
                           AND CURRENT_DATE BETWEEN b."startDate" AND b."endDate"
-                        GROUP BY b.id, b.category, b.amount, b."startDate", b."endDate"
-                    `);
+                        GROUP BY b.id, tc.name, b.amount, b."startDate", b."endDate"
+                    `, [userId, mentionedCategory]);
                 } catch (err) {
                     console.log("Budget context fetch skipped:", (err as Error).message);
                 }
@@ -160,21 +171,18 @@ export class ChatController {
                 })) : []),
             ];
 
-            console.log(enrichedResults,"enrich-->>")
             // ── Pass 2: Generate explanation ───────────────────────────────
             const { explanation } = await generateExplanation(
                 question.trim(),
                 userId,
                 enrichedResults,
-                rag_context,
+                pass1.rag_context,
                 sqlError
             );
 
-            console.log(results,'----')
-            console.log(explanation,'----')
             res.status(200).json(new ApiResponse(true, "Chat response generated successfully", {
                 question,
-                sql,
+                sql: pass1.sql,
                 results,
                 explanation,
                 ...(sqlError && { sqlError }),
@@ -182,7 +190,7 @@ export class ChatController {
 
         } catch (err) {
             if (isAIServiceUnavailable(err)) {
-                res.status(503).json(new ApiResponse(false, "AI service is offline. Make sure FastAPI is running on port 8000.", null));
+                res.status(503).json(new ApiResponse(false, "AI service is offline.", null));
                 return;
             }
             next(err);
