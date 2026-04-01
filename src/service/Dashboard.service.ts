@@ -5,12 +5,16 @@ const transactionRepo = AppDataSource.getRepository(Transaction);
 
 export class DashboardService {
 
-  static async getDashboardSummary(accountId: string, year: number) {
+  static async getDashboardSummary(
+    accountId: string,
+    year: number,
+    month: number = new Date().getMonth() + 1  // ✅ Defaults to current month
+  ) {
 
     // 1️⃣ Monthly Income vs Expense
     const monthlyRaw = await transactionRepo
       .createQueryBuilder("t")
-      .select("EXTRACT(MONTH FROM t.transactionDate)", "month") // ✅ use transactionDate not createdAt
+      .select("EXTRACT(MONTH FROM t.transactionDate)", "month")
       .addSelect(
         `SUM(CASE WHEN t.type = 'credit' THEN t.amount ELSE 0 END)`,
         "income"
@@ -20,25 +24,20 @@ export class DashboardService {
         "expense"
       )
       .where("t.accountId = :accountId", { accountId })
-      .andWhere("EXTRACT(YEAR FROM t.transactionDate) = :year", { year }) // ✅ transactionDate
+      .andWhere("EXTRACT(YEAR FROM t.transactionDate) = :year", { year })
       .groupBy("month")
       .orderBy("month", "ASC")
       .getRawMany();
 
     // Normalize → Always return 12 months
     const monthlyData = Array.from({ length: 12 }, (_, i) => {
-      const month = i + 1;
-      const found = monthlyRaw.find((m) => Number(m.month) === month);
+      const m = i + 1;
+      const found = monthlyRaw.find((r) => Number(r.month) === m);
 
       const income = found ? Number(found.income) : 0;
       const expense = found ? Number(found.expense) : 0;
 
-      return {
-        month,
-        income,
-        expense,
-        net: income - expense,
-      };
+      return { month: m, income, expense, net: income - expense };
     });
 
     // 2️⃣ Total Income
@@ -47,7 +46,7 @@ export class DashboardService {
       .select("SUM(t.amount)", "total")
       .where("t.accountId = :accountId", { accountId })
       .andWhere("t.type = 'credit'")
-      .andWhere("EXTRACT(YEAR FROM t.transactionDate) = :year", { year }) // ✅ transactionDate
+      .andWhere("EXTRACT(YEAR FROM t.transactionDate) = :year", { year })
       .getRawOne();
 
     const totalIncome = Number(totalIncomeRaw.total || 0);
@@ -58,26 +57,28 @@ export class DashboardService {
       .select("SUM(t.amount)", "total")
       .where("t.accountId = :accountId", { accountId })
       .andWhere("t.type = 'debit'")
-      .andWhere("EXTRACT(YEAR FROM t.transactionDate) = :year", { year }) // ✅ transactionDate
+      .andWhere("EXTRACT(YEAR FROM t.transactionDate) = :year", { year })
       .getRawOne();
 
     const totalExpense = Number(totalExpenseRaw.total || 0);
 
-    // 4️⃣ Category-wise Expense Breakdown ✅ JOIN transaction_category
+    // 4️⃣ Category-wise Expense Breakdown — filtered by specific month ✅
     const categoryBreakdown = await transactionRepo
       .createQueryBuilder("t")
-      .select("tc.name", "category")             // ✅ tc.name instead of t.category
+      .select("tc.name", "category")
       .addSelect("SUM(t.amount)", "total")
-      .leftJoin("t.category", "tc")              // ✅ join relation
+      .leftJoin("t.category", "tc")
       .where("t.accountId = :accountId", { accountId })
       .andWhere("t.type = 'debit'")
-      .andWhere("EXTRACT(YEAR FROM t.transactionDate) = :year", { year }) // ✅ transactionDate
-      .groupBy("tc.name")                        // ✅ group by tc.name
+      .andWhere("EXTRACT(YEAR FROM t.transactionDate) = :year", { year })
+      .andWhere("EXTRACT(MONTH FROM t.transactionDate) = :month", { month }) // ✅ Filter by month
+      .groupBy("tc.name")
       .orderBy("total", "DESC")
       .getRawMany();
 
     return {
       year,
+      month,  // ✅ Include month in response so caller knows which month was used
       monthlyData,
       totals: {
         income: totalIncome,

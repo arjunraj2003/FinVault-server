@@ -11,7 +11,7 @@ const REFRESH_SECRET = process.env.REFRESH_SECRET;
 // ----------  ACCESS TOKEN  ----------
 const generateAccessToken = (payload) => {
     try {
-        return jsonwebtoken_1.default.sign(payload, JWT_SECRET, { expiresIn: '1d' });
+        return jsonwebtoken_1.default.sign(payload, JWT_SECRET, { expiresIn: '7d' });
     }
     catch (error) {
         console.log(error);

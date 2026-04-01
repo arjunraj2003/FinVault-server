@@ -2,8 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserService = void 0;
 const data_source_1 = require("../config/data-source");
-const User_entity_1 = require("../entity/User.entity");
-const userRepo = data_source_1.AppDataSource.getRepository(User_entity_1.User);
+const user_entity_1 = require("../entity/user.entity");
+const userRepo = data_source_1.AppDataSource.getRepository(user_entity_1.User);
 class UserService {
     static async createUser(name, email, password) {
         const newUser = userRepo.create({ name, email, password });

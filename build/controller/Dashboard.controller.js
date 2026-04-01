@@ -6,11 +6,12 @@ const apiResponse_1 = require("../utils/apiResponse");
 class DashboardController {
     static async getDashboard(req, res, next) {
         try {
-            const { accountId, year } = req.query;
+            const { accountId, year, month } = req.query;
             if (!accountId || !year) {
                 throw new Error("accountId and year are required");
             }
-            const data = await Dashboard_service_1.DashboardService.getDashboardSummary(accountId, Number(year));
+            console.log(month);
+            const data = await Dashboard_service_1.DashboardService.getDashboardSummary(accountId, Number(year), Number(month));
             res.status(200).json(new apiResponse_1.ApiResponse(true, "Dashboard fetched successfully", data));
         }
         catch (error) {

@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TransactionController = void 0;
 const Transaction_service_1 = require("../service/Transaction.service");
 const apiResponse_1 = require("../utils/apiResponse");
-const Transaction_entity_1 = require("../entity/Transaction.entity");
+const transaction_category_enum_1 = require("../utils/transaction-category.enum");
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -35,7 +35,7 @@ function parsePositiveInt(value, min, max) {
 class TransactionController {
     static async createTransaction(req, res, next) {
         try {
-            const { type, amount, accountId, category, description, transactionDate, } = req.body;
+            const { type, amount, accountId, categoryId, description, transactionDate, } = req.body;
             // --- accountId ---
             // Missing entirely in original code — undefined was silently forwarded
             // to the service which then threw a generic 500.
@@ -52,13 +52,13 @@ class TransactionController {
                     return;
             }
             // --- type ---
-            if (!type || !Object.values(Transaction_entity_1.TransactionType).includes(type)) {
-                if (badRequest(res, `type must be one of: ${Object.values(Transaction_entity_1.TransactionType).join(", ")}.`))
+            if (!type || !Object.values(transaction_category_enum_1.TransactionType).includes(type)) {
+                if (badRequest(res, `type must be one of: ${Object.values(transaction_category_enum_1.TransactionType).join(", ")}.`))
                     return;
             }
             // --- category ---
-            if (!category || !Object.values(Transaction_entity_1.TransactionCategory).includes(category)) {
-                if (badRequest(res, `category must be one of: ${Object.values(Transaction_entity_1.TransactionCategory).join(", ")}.`))
+            if (!categoryId || typeof categoryId !== "string" || !categoryId.trim()) {
+                if (badRequest(res, "categoryId is required."))
                     return;
             }
             // --- transactionDate ---
@@ -74,7 +74,7 @@ class TransactionController {
                 if (badRequest(res, "transactionDate is not a valid date."))
                     return;
             }
-            const result = await Transaction_service_1.TransactionService.createTransaction(type, amt, accountId.trim(), category, description?.trim() || undefined, parsedDate);
+            const result = await Transaction_service_1.TransactionService.createTransaction(type, amt, accountId.trim(), categoryId, description?.trim() || undefined, parsedDate);
             res
                 .status(201)
                 .json(new apiResponse_1.ApiResponse(true, "Transaction created successfully.", result));
@@ -85,7 +85,7 @@ class TransactionController {
     }
     static async getTransactions(req, res, next) {
         try {
-            const { page: rawPage = "1", limit: rawLimit = "10", type: rawType, category: rawCategory, accountId, search, startDate, endDate, } = req.query;
+            const { page: rawPage = "1", limit: rawLimit = "10", type: rawType, categoryId: rawCategory, accountId, search, startDate, endDate, } = req.query;
             // --- page ---
             const page = parsePositiveInt(rawPage, 1, Number.MAX_SAFE_INTEGER);
             if (page === null) {
@@ -101,13 +101,13 @@ class TransactionController {
                     return;
             }
             // --- optional type filter ---
-            if (rawType !== undefined && !Object.values(Transaction_entity_1.TransactionType).includes(rawType)) {
-                if (badRequest(res, `type must be one of: ${Object.values(Transaction_entity_1.TransactionType).join(", ")}.`))
+            if (rawType !== undefined && !Object.values(transaction_category_enum_1.TransactionType).includes(rawType)) {
+                if (badRequest(res, `type must be one of: ${Object.values(transaction_category_enum_1.TransactionType).join(", ")}.`))
                     return;
             }
             // --- optional category filter ---
-            if (rawCategory !== undefined && !Object.values(Transaction_entity_1.TransactionCategory).includes(rawCategory)) {
-                if (badRequest(res, `category must be one of: ${Object.values(Transaction_entity_1.TransactionCategory).join(", ")}.`))
+            if (rawCategory !== undefined && !rawCategory.trim()) {
+                if (badRequest(res, "categoryId must be a non-empty string."))
                     return;
             }
             // --- date range: require both or neither ---
@@ -137,7 +137,7 @@ class TransactionController {
                 page: page,
                 limit: limit,
                 type: rawType,
-                category: rawCategory,
+                categoryId: rawCategory,
                 accountId,
                 search,
                 startDate,
@@ -165,6 +165,7 @@ class TransactionController {
         }
         catch (error) {
             next(error);
+            console.log(error);
         }
     }
 }

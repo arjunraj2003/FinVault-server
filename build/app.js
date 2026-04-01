@@ -10,6 +10,8 @@ const account_routes_1 = __importDefault(require("./routes/account.routes"));
 const transaction_routes_1 = __importDefault(require("./routes/transaction.routes"));
 const dashboard_routes_1 = __importDefault(require("./routes/dashboard.routes"));
 const budget_routes_1 = __importDefault(require("./routes/budget.routes"));
+const category_routes_1 = __importDefault(require("./routes/category.routes"));
+const chat_router_1 = __importDefault(require("./ai/chat.router"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const cors_1 = __importDefault(require("cors"));
 const morgan_1 = __importDefault(require("morgan"));
@@ -46,6 +48,8 @@ app.use('/api/v1/account', account_routes_1.default);
 app.use('/api/v1/transaction', transaction_routes_1.default);
 app.use('/api/v1/dashboard', dashboard_routes_1.default);
 app.use('/api/v1/budget', budget_routes_1.default);
+app.use('/api/v1/chat', chat_router_1.default);
+app.use('/api/v1/category', category_routes_1.default);
 app.use(errorHandler_1.errorHandler);
 exports.default = app;
 //# sourceMappingURL=app.js.map

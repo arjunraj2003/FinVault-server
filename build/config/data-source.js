@@ -6,9 +6,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppDataSource = void 0;
 const typeorm_1 = require("typeorm");
 const dotenv_1 = __importDefault(require("dotenv"));
-const User_entity_1 = require("../entity/User.entity");
-const Account_entity_1 = require("../entity/Account.entity");
-const Transaction_entity_1 = require("../entity/Transaction.entity");
+const user_entity_1 = require("../entity/user.entity");
+const account_entity_1 = require("../entity/account.entity");
+const transaction_entity_1 = require("../entity/transaction.entity");
+const budget_entity_1 = require("../entity/budget.entity");
+const TransactionCategory_entity_1 = require("../entity/TransactionCategory.entity");
 dotenv_1.default.config();
 // export const AppDataSource = new DataSource({
 //     type: "postgres",
@@ -19,17 +21,16 @@ dotenv_1.default.config();
 //     database: process.env.DB_NAME,
 //     synchronize: true,
 //     logging: false,
-//     entities: [User,Account,Transaction],
-// });
+//     entities: [User,Account,Transaction,Budget,TransactionCategory],
+// })
 exports.AppDataSource = new typeorm_1.DataSource({
     type: "postgres",
     url: process.env.DATABASE_URL,
     ssl: {
         rejectUnauthorized: false,
     },
-    synchronize: false,
+    synchronize: process.env.NODE_ENV !== "production",
     logging: false,
-    entities: [User_entity_1.User, Account_entity_1.Account, Transaction_entity_1.Transaction],
-    migrations: ["dist/migrations/*.js"],
+    entities: [user_entity_1.User, account_entity_1.Account, transaction_entity_1.Transaction, budget_entity_1.Budget, TransactionCategory_entity_1.TransactionCategory],
 });
 //# sourceMappingURL=data-source.js.map

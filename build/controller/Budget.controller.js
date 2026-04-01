@@ -7,7 +7,7 @@ const budgetService = new Budget_service_1.BudgetService();
 class BudgetController {
     static async createBudget(req, res, next) {
         try {
-            const userId = req.user.id;
+            const userId = req.user.userId;
             const newBudget = await budgetService.createBudget({
                 userId,
                 ...req.body
@@ -20,7 +20,8 @@ class BudgetController {
     }
     static async getBudgets(req, res, next) {
         try {
-            const userId = req.user.id;
+            const userId = req.user.userId;
+            console.log(userId);
             const budgets = await budgetService.getBudgets(userId);
             res.status(200).json(new apiResponse_1.ApiResponse(true, "Budgets fetched successfully", budgets));
         }
@@ -30,7 +31,7 @@ class BudgetController {
     }
     static async getBudgetById(req, res, next) {
         try {
-            const userId = req.user.id;
+            const userId = req.user.userId;
             const { id } = req.params;
             const budget = await budgetService.getBudgetById(id, userId);
             if (!budget) {
@@ -44,7 +45,7 @@ class BudgetController {
     }
     static async updateBudget(req, res, next) {
         try {
-            const userId = req.user.id;
+            const userId = req.user.userId;
             const { id } = req.params;
             const updatedBudget = await budgetService.updateBudget(id, userId, req.body);
             res.status(200).json(new apiResponse_1.ApiResponse(true, "Budget updated successfully", updatedBudget));
@@ -55,7 +56,7 @@ class BudgetController {
     }
     static async deleteBudget(req, res, next) {
         try {
-            const userId = req.user.id;
+            const userId = req.user.userId;
             const { id } = req.params;
             await budgetService.deleteBudget(id, userId);
             res.status(200).json(new apiResponse_1.ApiResponse(true, "Budget deleted successfully"));
@@ -66,8 +67,9 @@ class BudgetController {
     }
     static async getBudgetProgress(req, res, next) {
         try {
-            const userId = req.user.id;
+            const userId = req.user.userId;
             const { id } = req.params;
+            console.log(userId);
             const progress = await budgetService.getBudgetProgress(id, userId);
             res.status(200).json(new apiResponse_1.ApiResponse(true, "Budget progress fetched successfully", progress));
         }
