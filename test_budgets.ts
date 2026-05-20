@@ -11,7 +11,7 @@ async function runTests() {
             email: `test_budget_${Date.now()}@example.com`,
             password: 'password123'
         };
-        
+
         console.log(`Registering user: ${userData.email}`);
         const regRes = await axios.post(`${API_URL}/auth/register`, userData);
         const token = regRes.data.data.accessToken;
@@ -66,7 +66,7 @@ async function runTests() {
             description: "Groceries",
             transactionDate: new Date().toISOString()
         }, config);
-        
+
         await axios.post(`${API_URL}/transaction`, {
             accountId: accountId,
             type: "debit",
@@ -87,9 +87,9 @@ async function runTests() {
         console.log(`  - Progress percentage: ${progress.progressPercentage}%`);
 
         if (progress.totalSpent === 65.5) {
-             console.log("✅ PROGRESS CALCULATION IS CORRECT!");
+            console.log("✅ PROGRESS CALCULATION IS CORRECT!");
         } else {
-             console.log(`❌ PROGRESS MISMATCH. Expected 65.5, got ${progress.totalSpent}`);
+            console.log(`❌ PROGRESS MISMATCH. Expected 65.5, got ${progress.totalSpent}`);
         }
 
         // 7. Test Delete Budget
@@ -103,9 +103,9 @@ async function runTests() {
             console.log("❌ DELETE TEST FAILED. BUDGET STILL EXISTS.");
         } catch (err: any) {
             if (err.response && err.response.status === 404) {
-                 console.log("✅ DELETE TEST SUCCESS. BUDGET NOT FOUND.");
+                console.log("✅ DELETE TEST SUCCESS. BUDGET NOT FOUND.");
             } else {
-                 console.log(`❓ DELETE TEST VERIFICATION FAILED. STATUS: ${err.response?.status}`);
+                console.log(`❓ DELETE TEST VERIFICATION FAILED. STATUS: ${err.response?.status}`);
             }
         }
 

@@ -7,7 +7,7 @@ require("reflect-metadata");
 const app_1 = __importDefault(require("./app"));
 const data_source_1 = require("./config/data-source");
 // import { redisClient } from "./config/redis-connet";
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4000;
 async function startServer() {
     try {
         // 1. Connect DB

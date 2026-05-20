@@ -3,7 +3,7 @@ import app from "./app";
 import { AppDataSource } from "./config/data-source";
 // import { redisClient } from "./config/redis-connet";
 
-const PORT = process.env.PORT || 3000; 
+const PORT = process.env.PORT || 4000; 
 
 async function startServer() {
   try {

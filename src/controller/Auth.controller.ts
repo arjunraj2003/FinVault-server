@@ -3,6 +3,7 @@ import { UserService } from "../service/Auth.Service";
 import { AuthService } from "../utils/auth";
 import { ApiResponse } from "../utils/apiResponse";
 import { instanceToPlain } from "class-transformer";
+import { ApiError } from "../utils/apiError";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -19,8 +20,12 @@ export class AuthController {
         try {
             const { name, email, password } = req.body;
 
+            if (!name || !email || !password) {
+                throw new ApiError("Name, email and password are required", 400);
+            }
+
             const exists = await UserService.getUserByEmail(email);
-            if (exists) throw new Error("Email already exists");
+            if (exists) throw new ApiError("Email already exists", 409);
 
             const hashedPassword = await AuthService.hashPassword(password);
             const user = await UserService.createUser(name, email, hashedPassword);
@@ -37,11 +42,15 @@ export class AuthController {
         try {
             const { email, password } = req.body;
 
+            if (!email || !password) {
+                throw new ApiError("Email and password are required", 400);
+            }
+
             const user = await UserService.getUserByEmail(email);
-            if (!user) throw new Error("Invalid credentials");
+            if (!user) throw new ApiError("Invalid credentials", 401);
 
             const isMatch = await AuthService.comparePassword(password, user.password);
-            if (!isMatch) throw new Error("Invalid credentials");
+            if (!isMatch) throw new ApiError("Invalid credentials", 401);
 
             const accessToken = AuthService.generateAccessToken(user.id);
             const refreshToken = AuthService.generateRefreshToken(user.id);
@@ -68,7 +77,7 @@ export class AuthController {
     static async refresh(req: Request, res: Response, next: NextFunction) {
         try {
             const token = req.cookies.refreshToken;
-            if (!token) throw new Error("No refresh token");
+            if (!token) throw new ApiError("No refresh token", 401);
 
             const data = AuthService.verifyRefreshToken(token) as any;
             const accessToken = AuthService.generateAccessToken(data.userId);
