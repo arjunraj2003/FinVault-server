@@ -1,9 +1,9 @@
+import { randomBytes } from "crypto";
 import { AppDataSource } from "../config/data-source";
 import { Account } from "../entity/account.entity";
 import { Transaction } from "../entity/transaction.entity";
 import { TransactionCategory } from "../entity/TransactionCategory.entity";
 import { TransactionType } from "../utils/transaction-category.enum";
-
 
 export interface GetTransactionsQuery {
   page: number;
@@ -20,6 +20,15 @@ export class TransactionService {
 
   private static toFinancialString(value: number): string {
     return (Math.round(value * 100) / 100).toFixed(2);
+  }
+
+  // Compatible UUID v4 generator for older Node.js runtimes (e.g. Node v12)
+  private static generateUUID(): string {
+    const bytes = randomBytes(16);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+    bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant RFC 4122
+    const hex = bytes.toString("hex");
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
   }
 
   static async createTransaction(
@@ -44,31 +53,53 @@ export class TransactionService {
       const accountRepo = manager.getRepository(Account);
       const transactionRepo = manager.getRepository(Transaction);
 
-      // Fetch account with lock first — no relations, because PostgreSQL
-      // cannot apply FOR UPDATE on the nullable side of a LEFT JOIN.
-      const account = await accountRepo.findOne({
-        where: { id: accountId },
-        lock: { mode: "pessimistic_write" },
-      });
+      let account: Account | null = null;
+      let sourceAccount: Account | null = null;
 
-      if (account) {
-        // Load creditCardDetails separately without a lock
-        const accountWithDetails = await accountRepo.findOne({
-          where: { id: accountId },
-          relations: ["creditCardDetails"],
+      // 1. Concurrency deadlocking prevention via deterministic locking order
+      if (sourceAccountId && sourceAccountId.trim()) {
+        const sortedIds = [accountId, sourceAccountId].sort();
+        const firstId = sortedIds[0];
+        const secondId = sortedIds[1];
+
+        const firstAccount = await accountRepo.findOne({
+          where: { id: firstId },
+          lock: { mode: "pessimistic_write" },
         });
-        account.creditCardDetails = accountWithDetails?.creditCardDetails;
+
+        const secondAccount = await accountRepo.findOne({
+          where: { id: secondId },
+          lock: { mode: "pessimistic_write" },
+        });
+
+        if (firstId === accountId) {
+          account = firstAccount;
+          sourceAccount = secondAccount;
+        } else {
+          account = secondAccount;
+          sourceAccount = firstAccount;
+        }
+      } else {
+        account = await accountRepo.findOne({
+          where: { id: accountId },
+          lock: { mode: "pessimistic_write" },
+        });
       }
 
       if (!account) {
         throw new Error("Account not found.");
       }
 
+      // Load creditCardDetails separately without a lock
+      const accountWithDetails = await accountRepo.findOne({
+        where: { id: accountId },
+        relations: ["creditCardDetails"],
+      });
+      account.creditCardDetails = accountWithDetails?.creditCardDetails;
+
       // Parse stored balance string safely.
-      // Number("") returns 0 which is a safe default; NaN would corrupt the balance.
       const currentBalance = Number(account.balance);
       if (isNaN(currentBalance)) {
-        // This indicates data corruption in the DB — surface it loudly.
         throw new Error(
           `Account ${accountId} has a corrupt balance value: "${account.balance}".`
         );
@@ -95,20 +126,9 @@ export class TransactionService {
         newBalance = currentBalance - amount;
       }
 
-      // Use integer-safe rounding — never raw toFixed() on a float result.
       account.balance = TransactionService.toFinancialString(newBalance);
       
-      let sourceAccount = null;
-      if (sourceAccountId && type === TransactionType.CREDIT) {
-        sourceAccount = await accountRepo.findOne({
-          where: { id: sourceAccountId },
-          lock: { mode: "pessimistic_write" },
-        });
-
-        if (!sourceAccount) {
-          throw new Error("Source account for payment not found.");
-        }
-
+      if (sourceAccount) {
         const sourceBalance = Number(sourceAccount.balance);
         if (isNaN(sourceBalance)) {
           throw new Error(`Source account has a corrupt balance.`);
@@ -121,11 +141,15 @@ export class TransactionService {
         sourceAccount.balance = TransactionService.toFinancialString(sourceBalance - amount);
         await accountRepo.save(sourceAccount);
       }
+
       const categoryRepo = manager.getRepository(TransactionCategory);
       const category = await categoryRepo.findOne({ where: { id: categoryId, isActive: true } });
       if (!category) {
         throw new Error(`Category with id ${categoryId} not found.`);
       }
+
+      // Generate a unique identifier for linked transfer legs
+      const transferGroupId = sourceAccount ? TransactionService.generateUUID() : null;
 
       const transaction = transactionRepo.create({
         type,
@@ -134,6 +158,7 @@ export class TransactionService {
         description: sourceAccount ? `Payment from ${sourceAccount.name}${description ? ' - ' + description : ''}` : description,
         transactionDate,
         account,
+        transferGroupId,
       });
 
       await accountRepo.save(account);
@@ -148,6 +173,7 @@ export class TransactionService {
           description: `Payment to ${account.name}`,
           transactionDate,
           account: sourceAccount,
+          transferGroupId,
         });
         savedSourceTransaction = await transactionRepo.save(sourceTransaction);
       }
@@ -171,9 +197,6 @@ export class TransactionService {
       endDate,
     } = query;
 
-    // These should already be validated by the controller, but guard here too.
-    // A NaN skip/take in TypeORM silently removes the LIMIT clause — returning
-    // the entire table, which is a serious performance and data-leak risk.
     if (!Number.isInteger(page) || page < 1) {
       throw new Error("page must be a positive integer.");
     }
@@ -233,68 +256,134 @@ export class TransactionService {
     };
   }
 
-static async deleteTransaction(transactionId: string) {
-  if (!transactionId || !transactionId.trim()) {
-    throw new Error("Transaction ID is required.");
+  static async deleteTransaction(transactionId: string) {
+    if (!transactionId || !transactionId.trim()) {
+      throw new Error("Transaction ID is required.");
+    }
+
+    return await AppDataSource.transaction(async (manager) => {
+      const accountRepo = manager.getRepository(Account);
+      const transactionRepo = manager.getRepository(Transaction);
+
+      // Fetch transaction with NO lock first to get accountId and transferGroupId
+      const transactionPlain = await transactionRepo.findOne({
+        where: { id: transactionId },
+      });
+
+      if (!transactionPlain) {
+        throw new Error("Transaction not found.");
+      }
+
+      const transferGroupId = transactionPlain.transferGroupId;
+
+      if (transferGroupId) {
+        // Fetch all transactions under this transfer group
+        const transferTransactions = await transactionRepo.find({
+          where: { transferGroupId },
+        });
+
+        // Ensure deterministic locking order for all unique accounts involved
+        const uniqueAccountIds = Array.from(new Set(transferTransactions.map(t => t.accountId))).sort();
+        const accountsMap: Record<string, Account> = {};
+
+        for (const accId of uniqueAccountIds) {
+          const acc = await accountRepo.findOne({
+            where: { id: accId },
+            lock: { mode: "pessimistic_write" },
+          });
+          if (!acc) {
+            throw new Error(`Account associated with transfer was not found.`);
+          }
+          accountsMap[accId] = acc;
+        }
+
+        // Lock all transactions within the group to execute deletion
+        const lockedTransactions = [];
+        for (const t of transferTransactions) {
+          const lockedT = await transactionRepo.findOne({
+            where: { id: t.id },
+            lock: { mode: "pessimistic_write" },
+          });
+          if (lockedT) {
+            lockedTransactions.push(lockedT);
+          }
+        }
+
+        // Process adjustments for all transactions in the group atomically
+        for (const t of lockedTransactions) {
+          const account = accountsMap[t.accountId];
+          const currentBalance = Number(account.balance);
+          if (isNaN(currentBalance)) {
+            throw new Error(`Account has a corrupt balance value.`);
+          }
+
+          const amount = Number(t.amount);
+          if (isNaN(amount)) {
+            throw new Error(`Transaction has a corrupt amount value.`);
+          }
+
+          // Reverse balance adjustment
+          let newBalance: number;
+          if (t.type === TransactionType.CREDIT) {
+            newBalance = currentBalance - amount;
+          } else {
+            newBalance = currentBalance + amount;
+          }
+
+          account.balance = TransactionService.toFinancialString(newBalance);
+          await accountRepo.save(account);
+          await transactionRepo.remove(t);
+        }
+
+        return { message: "Transfer transactions deleted successfully." };
+      }
+
+      // Normal single transaction deletion
+      const accountId = transactionPlain.accountId;
+
+      // Lock account row
+      const account = await accountRepo.findOne({
+        where: { id: accountId },
+        lock: { mode: "pessimistic_write" },
+      });
+
+      if (!account) {
+        throw new Error("Account not found.");
+      }
+
+      // Lock transaction row
+      const transaction = await transactionRepo.findOne({
+        where: { id: transactionId },
+        lock: { mode: "pessimistic_write" },
+      });
+
+      if (!transaction) {
+        throw new Error("Transaction not found.");
+      }
+
+      const currentBalance = Number(account.balance);
+      if (isNaN(currentBalance)) {
+        throw new Error(`Account has a corrupt balance value: "${account.balance}".`);
+      }
+
+      const amount = Number(transaction.amount);
+      if (isNaN(amount)) {
+        throw new Error(`Transaction has a corrupt amount value: "${transaction.amount}".`);
+      }
+
+      let newBalance: number;
+      if (transaction.type === TransactionType.CREDIT) {
+        newBalance = currentBalance - amount;
+      } else {
+        newBalance = currentBalance + amount;
+      }
+
+      account.balance = TransactionService.toFinancialString(newBalance);
+
+      await accountRepo.save(account);
+      await transactionRepo.remove(transaction);
+
+      return { message: "Transaction deleted successfully." };
+    });
   }
-
-  return await AppDataSource.transaction(async (manager) => {
-
-    // Step 1: fetch transaction with NO lock first — just to get accountId
-    const transactionPlain = await manager.findOne(Transaction, {
-      where: { id: transactionId },
-    });
-
-    if (!transactionPlain) {
-      throw new Error("Transaction not found.");
-    }
-
-    // Step 2: get accountId directly from the FK column
-    const accountId = (transactionPlain as any).accountId;  // ✅ raw FK column
-
-    // Step 3: lock account row separately
-    const account = await manager.findOne(Account, {
-      where: { id: accountId },
-      lock: { mode: "pessimistic_write" },
-    });
-
-    if (!account) {
-      throw new Error("Account not found.");
-    }
-
-    // Step 4: now lock the transaction row separately
-    const transaction = await manager.findOne(Transaction, {
-      where: { id: transactionId },
-      lock: { mode: "pessimistic_write" },
-    });
-
-    if (!transaction) {
-      throw new Error("Transaction not found.");
-    }
-
-    const currentBalance = Number(account.balance);
-    if (isNaN(currentBalance)) {
-      throw new Error(`Account has a corrupt balance value: "${account.balance}".`);
-    }
-
-    const amount = Number(transaction.amount);
-    if (isNaN(amount)) {
-      throw new Error(`Transaction has a corrupt amount value: "${transaction.amount}".`);
-    }
-
-    let newBalance: number;
-    if (transaction.type === TransactionType.CREDIT) {
-      newBalance = currentBalance - amount;
-    } else {
-      newBalance = currentBalance + amount;
-    }
-
-    account.balance = TransactionService.toFinancialString(newBalance);
-
-    await manager.save(account);
-    await manager.remove(transaction);
-
-    return { message: "Transaction deleted successfully." };
-  });
-}
 }

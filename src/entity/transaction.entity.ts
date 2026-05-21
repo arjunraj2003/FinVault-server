@@ -39,6 +39,9 @@ export class Transaction {
     @Column({ name: "accountId" })
     accountId!: string;  // ✅ exposes the FK column directly — no cast needed
 
+    @Column({ type: "uuid", nullable: true })
+    transferGroupId?: string | null;
+
     @ManyToOne(() => Account, (account) => account.transactions, {
         onDelete: "CASCADE"
     })
