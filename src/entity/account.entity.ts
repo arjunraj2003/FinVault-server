@@ -3,11 +3,14 @@ import {
   Entity,
   ManyToOne,
   OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
   CreateDateColumn
 } from "typeorm";
 import { User } from "./user.entity";
 import { Transaction } from "./transaction.entity";
+import { CreditCardDetails } from "./CreditCardDetails.entity";
+
 
 export enum AccountType {
   CHECKING = "checking",
@@ -39,4 +42,10 @@ export class Account {
         cascade: true,
     })
     transactions!: Transaction[];
+
+    @OneToOne(() => CreditCardDetails, (details) => details.account, {
+        cascade: true,
+        nullable: true,
+    })
+    creditCardDetails?: CreditCardDetails;
 }

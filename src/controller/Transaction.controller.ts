@@ -18,6 +18,7 @@ interface CreateTransactionBody {
   categoryId: string;
   description?: string;
   transactionDate: string;
+  sourceAccountId?: string;
 }
 
 // Express types req.query values as string | string[] | ParsedQs — keep explicit.
@@ -80,6 +81,7 @@ export class TransactionController {
         categoryId,
         description,
         transactionDate,
+        sourceAccountId,
       } = req.body;
 
       // --- accountId ---
@@ -125,7 +127,8 @@ export class TransactionController {
         accountId.trim(),
         categoryId,
         description?.trim() || undefined,
-        parsedDate
+        parsedDate,
+        sourceAccountId?.trim()
       );
 
       res

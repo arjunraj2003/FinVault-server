@@ -28,7 +28,8 @@ export class TransactionService {
     accountId: string,
     categoryId: string,
     description: string | undefined,
-    transactionDate: Date
+    transactionDate: Date,
+    sourceAccountId?: string
   ) {
 
     if (!Number.isFinite(amount) || amount <= 0) {
@@ -43,10 +44,21 @@ export class TransactionService {
       const accountRepo = manager.getRepository(Account);
       const transactionRepo = manager.getRepository(Transaction);
 
+      // Fetch account with lock first — no relations, because PostgreSQL
+      // cannot apply FOR UPDATE on the nullable side of a LEFT JOIN.
       const account = await accountRepo.findOne({
         where: { id: accountId },
         lock: { mode: "pessimistic_write" },
       });
+
+      if (account) {
+        // Load creditCardDetails separately without a lock
+        const accountWithDetails = await accountRepo.findOne({
+          where: { id: accountId },
+          relations: ["creditCardDetails"],
+        });
+        account.creditCardDetails = accountWithDetails?.creditCardDetails;
+      }
 
       if (!account) {
         throw new Error("Account not found.");
@@ -65,6 +77,13 @@ export class TransactionService {
       let newBalance: number;
 
       if (type === TransactionType.CREDIT) {
+        if (account.type === "credit" && account.creditCardDetails) {
+          const limit = Number(account.creditCardDetails.creditLimit);
+          if (currentBalance + amount > limit) {
+            const maxPayment = limit - currentBalance;
+            throw new Error(`Repayment amount exceeds the outstanding bill. Maximum payment allowed is ${maxPayment.toFixed(2)}.`);
+          }
+        }
         newBalance = currentBalance + amount;
       } else {
         // DEBIT
@@ -78,6 +97,30 @@ export class TransactionService {
 
       // Use integer-safe rounding — never raw toFixed() on a float result.
       account.balance = TransactionService.toFinancialString(newBalance);
+      
+      let sourceAccount = null;
+      if (sourceAccountId && type === TransactionType.CREDIT) {
+        sourceAccount = await accountRepo.findOne({
+          where: { id: sourceAccountId },
+          lock: { mode: "pessimistic_write" },
+        });
+
+        if (!sourceAccount) {
+          throw new Error("Source account for payment not found.");
+        }
+
+        const sourceBalance = Number(sourceAccount.balance);
+        if (isNaN(sourceBalance)) {
+          throw new Error(`Source account has a corrupt balance.`);
+        }
+
+        if (sourceBalance < amount) {
+          throw new Error(`Insufficient balance in the source account (${sourceAccount.name}).`);
+        }
+
+        sourceAccount.balance = TransactionService.toFinancialString(sourceBalance - amount);
+        await accountRepo.save(sourceAccount);
+      }
       const categoryRepo = manager.getRepository(TransactionCategory);
       const category = await categoryRepo.findOne({ where: { id: categoryId, isActive: true } });
       if (!category) {
@@ -88,13 +131,26 @@ export class TransactionService {
         type,
         amount: TransactionService.toFinancialString(amount),
         category,
-        description,
+        description: sourceAccount ? `Payment from ${sourceAccount.name}${description ? ' - ' + description : ''}` : description,
         transactionDate,
         account,
       });
 
       await accountRepo.save(account);
       const savedTransaction = await transactionRepo.save(transaction);
+      
+      let savedSourceTransaction = null;
+      if (sourceAccount) {
+        const sourceTransaction = transactionRepo.create({
+          type: TransactionType.DEBIT,
+          amount: TransactionService.toFinancialString(amount),
+          category,
+          description: `Payment to ${account.name}`,
+          transactionDate,
+          account: sourceAccount,
+        });
+        savedSourceTransaction = await transactionRepo.save(sourceTransaction);
+      }
 
       return {
         account,

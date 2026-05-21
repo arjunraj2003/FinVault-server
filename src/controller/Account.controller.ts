@@ -6,9 +6,18 @@ import { ApiResponse } from "../utils/apiResponse";
 export class AccountController{
     static async createAccount(req:Request,res:Response,next:NextFunction){
         try{
-            const {name,balance,type}=req.body
+            const {name,balance,type, creditLimit, statementDay, dueDay, interestRate}=req.body
             const userId=(req as any).user.id
-            const account=await AccountService.createAccount(userId,name,type,balance)
+            
+            let creditCardInfo = undefined;
+            if (type === 'credit') {
+                 if (!creditLimit || !statementDay || !dueDay) {
+                     throw new Error("Credit limit, statement day, and due day are required for credit cards");
+                 }
+                 creditCardInfo = { creditLimit, statementDay, dueDay, interestRate };
+            }
+
+            const account=await AccountService.createAccount(userId,name,type,balance, creditCardInfo)
 
             res.status(200).json(new ApiResponse(true,"Account Created Successfuly",account))
         }catch(error){
