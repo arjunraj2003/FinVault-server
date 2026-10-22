@@ -11,6 +11,7 @@ import { Transaction } from "./transaction.entity";
 import { TransactionCategory } from "./TransactionCategory.entity";
 import { CreditCardDetails } from "./CreditCardDetails.entity";
 import { CreditCardStatement } from "./CreditCardStatement.entity";
+import { WebAuthnCredential } from "./webauthn-credential.entity";
 import { Exclude } from "class-transformer";
 
 
@@ -49,4 +50,8 @@ export class User {
 
     @OneToMany(() => CreditCardStatement, (statement) => statement.user)
     creditCardStatements!: CreditCardStatement[];
+
+    @Exclude()
+    @OneToMany(() => WebAuthnCredential, (credential) => credential.user)
+    webauthnCredentials!: WebAuthnCredential[];
 }

@@ -4,15 +4,27 @@ import { AuthService } from "../utils/auth";
 import { ApiResponse } from "../utils/apiResponse";
 import { instanceToPlain } from "class-transformer";
 import { ApiError } from "../utils/apiError";
+import { User } from "../entity/user.entity";
 
 const isProd = process.env.NODE_ENV === "production";
 
-const cookieOptions = {
+export const authCookieBase = {
   httpOnly: true,
-  secure: isProd,              // true in production (HTTPS), false locally
-  sameSite: isProd ? "none" : "lax",   // "none" for cross-site in prod
+  secure: isProd,
+  sameSite: isProd ? "none" as const : "lax" as const,
+};
+
+const cookieOptions = {
+  ...authCookieBase,
   maxAge: 7 * 24 * 60 * 60 * 1000,
-} as const;
+};
+
+export function issueSession(res: Response, user: User) {
+    const accessToken = AuthService.generateAccessToken(user.id);
+    const refreshToken = AuthService.generateRefreshToken(user.id);
+    res.cookie("refreshToken", refreshToken, cookieOptions);
+    return { user: instanceToPlain(user), accessToken };
+}
 
 export class AuthController {
 
@@ -30,16 +42,9 @@ export class AuthController {
             const hashedPassword = await AuthService.hashPassword(password);
             const user = await UserService.createUser(name, email, hashedPassword);
 
-            const accessToken = AuthService.generateAccessToken(user.id);
-            const refreshToken = AuthService.generateRefreshToken(user.id);
-            res.cookie("refreshToken", refreshToken, cookieOptions);
-
             return res
                 .status(201)
-                .json(new ApiResponse(true, "User registered", {
-                    user: instanceToPlain(user),
-                    accessToken,
-                }));
+                .json(new ApiResponse(true, "User registered", issueSession(res, user)));
         } catch (err) {
             next(err);
         }
@@ -59,13 +64,8 @@ export class AuthController {
             const isMatch = await AuthService.comparePassword(password, user.password);
             if (!isMatch) throw new ApiError("Invalid credentials", 401);
 
-            const accessToken = AuthService.generateAccessToken(user.id);
-            const refreshToken = AuthService.generateRefreshToken(user.id);
-
-            res.cookie("refreshToken", refreshToken, cookieOptions);
-
             return res.json(
-                new ApiResponse(true, "Login successful", { user: instanceToPlain(user), accessToken })
+                new ApiResponse(true, "Login successful", issueSession(res, user))
             );
         } catch (err) {
             next(err);

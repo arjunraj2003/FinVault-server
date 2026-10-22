@@ -7,6 +7,7 @@ import { Budget } from "../entity/budget.entity";
 import { TransactionCategory } from "../entity/TransactionCategory.entity";
 import { CreditCardDetails } from "../entity/CreditCardDetails.entity";
 import { CreditCardStatement } from "../entity/CreditCardStatement.entity";
+import { WebAuthnCredential } from "../entity/webauthn-credential.entity";
 dotenv.config();
 
 
@@ -34,5 +35,5 @@ export const AppDataSource = new DataSource({
   },
   synchronize: process.env.NODE_ENV !== "production",
   logging: false,
-  entities: [User,Account,Transaction,Budget,TransactionCategory,CreditCardDetails,CreditCardStatement],
+  entities: [User,Account,Transaction,Budget,TransactionCategory,CreditCardDetails,CreditCardStatement,WebAuthnCredential],
 });
