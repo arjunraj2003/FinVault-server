@@ -35,7 +35,7 @@ export class Account {
     @CreateDateColumn()
     createdAt!: Date;
 
-    @ManyToOne(() => User, (user) => user.accounts, { onDelete: "CASCADE" })
+    @ManyToOne(() => User, (user) => user.accounts, { onDelete: "CASCADE", nullable: false })
     user!: User;
 
     @OneToMany(() => Transaction, (transaction) => transaction.account, {

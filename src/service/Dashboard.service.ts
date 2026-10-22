@@ -1,15 +1,23 @@
 import { AppDataSource } from "../config/data-source";
+import { Account } from "../entity/account.entity";
 import { Transaction } from "../entity/transaction.entity";
+import { ApiError } from "../utils/apiError";
 
 const transactionRepo = AppDataSource.getRepository(Transaction);
+const accountRepo = AppDataSource.getRepository(Account);
 
 export class DashboardService {
 
   static async getDashboardSummary(
     accountId: string,
     year: number,
-    month: number = new Date().getMonth() + 1  // ✅ Defaults to current month
+    month: number = new Date().getMonth() + 1,
+    userId: string
   ) {
+    const account = await accountRepo.findOne({
+      where: { id: accountId, user: { id: userId } },
+    });
+    if (!account) throw new ApiError("Account not found", 404);
 
     // 1️⃣ Monthly Income vs Expense
     const monthlyRaw = await transactionRepo
@@ -24,6 +32,7 @@ export class DashboardService {
         "expense"
       )
       .where("t.accountId = :accountId", { accountId })
+      .andWhere("t.userId = :userId", { userId })
       .andWhere("EXTRACT(YEAR FROM t.transactionDate) = :year", { year })
       .groupBy("month")
       .orderBy("month", "ASC")
@@ -45,6 +54,7 @@ export class DashboardService {
       .createQueryBuilder("t")
       .select("SUM(t.amount)", "total")
       .where("t.accountId = :accountId", { accountId })
+      .andWhere("t.userId = :userId", { userId })
       .andWhere("t.type = 'credit'")
       .andWhere("EXTRACT(YEAR FROM t.transactionDate) = :year", { year })
       .getRawOne();
@@ -56,6 +66,7 @@ export class DashboardService {
       .createQueryBuilder("t")
       .select("SUM(t.amount)", "total")
       .where("t.accountId = :accountId", { accountId })
+      .andWhere("t.userId = :userId", { userId })
       .andWhere("t.type = 'debit'")
       .andWhere("EXTRACT(YEAR FROM t.transactionDate) = :year", { year })
       .getRawOne();
@@ -69,6 +80,7 @@ export class DashboardService {
       .addSelect("SUM(t.amount)", "total")
       .leftJoin("t.category", "tc")
       .where("t.accountId = :accountId", { accountId })
+      .andWhere("t.userId = :userId", { userId })
       .andWhere("t.type = 'debit'")
       .andWhere("EXTRACT(YEAR FROM t.transactionDate) = :year", { year })
       .andWhere("EXTRACT(MONTH FROM t.transactionDate) = :month", { month }) // ✅ Filter by month

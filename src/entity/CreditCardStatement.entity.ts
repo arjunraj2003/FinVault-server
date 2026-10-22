@@ -7,6 +7,7 @@ import {
   PrimaryGeneratedColumn,
 } from "typeorm";
 import { Account } from "./account.entity";
+import { User } from "./user.entity";
 
 @Entity()
 export class CreditCardStatement {
@@ -37,6 +38,13 @@ export class CreditCardStatement {
 
   @Column({ type: "decimal", precision: 12, scale: 2, default: 0 })
   amountPaid!: string;
+
+  @Column({ type: "uuid", name: "userId" })
+  userId!: string;
+
+  @ManyToOne(() => User, (user) => user.creditCardStatements, { onDelete: "CASCADE", nullable: false })
+  @JoinColumn({ name: "userId" })
+  user!: User;
 
   @CreateDateColumn()
   createdAt!: Date;

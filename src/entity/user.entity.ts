@@ -7,6 +7,10 @@ import {
 } from "typeorm";
 import { Account } from "./account.entity";
 import { Budget } from "./budget.entity";
+import { Transaction } from "./transaction.entity";
+import { TransactionCategory } from "./TransactionCategory.entity";
+import { CreditCardDetails } from "./CreditCardDetails.entity";
+import { CreditCardStatement } from "./CreditCardStatement.entity";
 import { Exclude } from "class-transformer";
 
 
@@ -33,4 +37,16 @@ export class User {
 
     @OneToMany(() => Budget, (budget) => budget.user, { cascade: true })
     budgets!: Budget[];
+
+    @OneToMany(() => Transaction, (transaction) => transaction.user)
+    transactions!: Transaction[];
+
+    @OneToMany(() => TransactionCategory, (category) => category.user)
+    categories!: TransactionCategory[];
+
+    @OneToMany(() => CreditCardDetails, (details) => details.user)
+    creditCards!: CreditCardDetails[];
+
+    @OneToMany(() => CreditCardStatement, (statement) => statement.user)
+    creditCardStatements!: CreditCardStatement[];
 }

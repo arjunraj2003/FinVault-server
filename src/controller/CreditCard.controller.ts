@@ -1,12 +1,13 @@
 import { NextFunction, Request, Response } from "express";
 import { CreditCardService } from "../service/CreditCard.service";
 import { ApiResponse } from "../utils/apiResponse";
+import { getAuthUserId } from "../middlewares/auth.middleware";
 
 export class CreditCardController {
     static async getSummary(req: Request, res: Response, next: NextFunction) {
         try {
             const { accountId } = req.params;
-            const userId = (req as any).user.id;
+            const userId = getAuthUserId(req);
             
             const summary = await CreditCardService.getCreditCardSummary(accountId, userId);
             

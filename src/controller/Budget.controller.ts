@@ -1,13 +1,14 @@
 import { Request, Response, NextFunction } from "express";
 import { BudgetService } from "../service/Budget.service";
 import { ApiResponse } from "../utils/apiResponse";
+import { getAuthUserId } from "../middlewares/auth.middleware";
 
 const budgetService = new BudgetService();
 
 export class BudgetController {
     static async createBudget(req: Request, res: Response, next: NextFunction) {
         try {
-            const userId = (req as any).user.userId;
+            const userId = getAuthUserId(req);
             const newBudget = await budgetService.createBudget({
                 userId,
                 ...req.body
@@ -20,8 +21,7 @@ export class BudgetController {
 
     static async getBudgets(req: Request, res: Response, next: NextFunction) {
         try {
-            const userId = (req as any).user.userId;
-            console.log(userId)
+            const userId = getAuthUserId(req);
             const budgets = await budgetService.getBudgets(userId);
             res.status(200).json(new ApiResponse(true, "Budgets fetched successfully", budgets));
         } catch (error) {
@@ -31,7 +31,7 @@ export class BudgetController {
 
     static async getBudgetById(req: Request, res: Response, next: NextFunction) {
         try {
-            const userId = (req as any).user.userId;
+            const userId = getAuthUserId(req);
             
             const { id } = req.params;
             const budget = await budgetService.getBudgetById(id, userId);
@@ -48,7 +48,7 @@ export class BudgetController {
 
     static async updateBudget(req: Request, res: Response, next: NextFunction) {
         try {
-            const userId = (req as any).user.userId;
+            const userId = getAuthUserId(req);
             const { id } = req.params;
 
             const updatedBudget = await budgetService.updateBudget(id, userId, req.body);
@@ -60,7 +60,7 @@ export class BudgetController {
 
     static async deleteBudget(req: Request, res: Response, next: NextFunction) {
         try {
-            const userId = (req as any).user.userId;
+            const userId = getAuthUserId(req);
             const { id } = req.params;
 
             await budgetService.deleteBudget(id, userId);
@@ -72,9 +72,8 @@ export class BudgetController {
 
     static async getBudgetProgress(req: Request, res: Response, next: NextFunction) {
         try {
-            const userId = (req as any).user.userId;
+            const userId = getAuthUserId(req);
             const { id } = req.params;
-            console.log(userId)
             const progress = await budgetService.getBudgetProgress(id, userId);
             res.status(200).json(new ApiResponse(true, "Budget progress fetched successfully", progress));
         } catch (error) {

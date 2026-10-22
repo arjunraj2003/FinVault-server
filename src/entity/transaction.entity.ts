@@ -7,6 +7,7 @@ import {
     PrimaryGeneratedColumn
 } from "typeorm";
 import { Account } from "./account.entity";
+import { User } from "./user.entity";
 import { TransactionType } from "../utils/transaction-category.enum";
 import { TransactionCategory } from "./TransactionCategory.entity";
 
@@ -39,6 +40,9 @@ export class Transaction {
     @Column({ name: "accountId" })
     accountId!: string;  // ✅ exposes the FK column directly — no cast needed
 
+    @Column({ type: "uuid", name: "userId" })
+    userId!: string;
+
     @Column({ type: "uuid", nullable: true })
     transferGroupId?: string | null;
 
@@ -46,4 +50,8 @@ export class Transaction {
         onDelete: "CASCADE"
     })
     account!: Account;
+
+    @ManyToOne(() => User, (user) => user.transactions, { onDelete: "CASCADE", nullable: false })
+    @JoinColumn({ name: "userId" })
+    user!: User;
 }

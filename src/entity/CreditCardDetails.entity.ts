@@ -2,10 +2,12 @@ import {
   Column,
   Entity,
   JoinColumn,
+  ManyToOne,
   OneToOne,
   PrimaryGeneratedColumn,
 } from "typeorm";
 import { Account } from "./account.entity";
+import { User } from "./user.entity";
 
 @Entity()
 export class CreditCardDetails {
@@ -30,4 +32,11 @@ export class CreditCardDetails {
 
   @Column({ type: "decimal", precision: 5, scale: 2, nullable: true })
   interestRate?: string;
+
+  @Column({ type: "uuid", name: "userId" })
+  userId!: string;
+
+  @ManyToOne(() => User, (user) => user.creditCards, { onDelete: "CASCADE", nullable: false })
+  @JoinColumn({ name: "userId" })
+  user!: User;
 }

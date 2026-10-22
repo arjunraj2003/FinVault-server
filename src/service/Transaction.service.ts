@@ -3,9 +3,12 @@ import { AppDataSource } from "../config/data-source";
 import { Account } from "../entity/account.entity";
 import { Transaction } from "../entity/transaction.entity";
 import { TransactionCategory } from "../entity/TransactionCategory.entity";
+import { User } from "../entity/user.entity";
 import { TransactionType } from "../utils/transaction-category.enum";
+import { ApiError } from "../utils/apiError";
 
 export interface GetTransactionsQuery {
+  userId: string;
   page: number;
   limit: number;
   type?: TransactionType;
@@ -32,6 +35,7 @@ export class TransactionService {
   }
 
   static async createTransaction(
+    userId: string,
     type: TransactionType,
     amount: number,
     accountId: string,
@@ -52,12 +56,24 @@ export class TransactionService {
     return await AppDataSource.transaction(async (manager) => {
       const accountRepo = manager.getRepository(Account);
       const transactionRepo = manager.getRepository(Transaction);
+      const user = await manager.getRepository(User).findOne({ where: { id: userId } });
+      if (!user) throw new ApiError("User not found", 401);
+
+      const ownedAccount = await accountRepo.findOne({
+        where: { id: accountId, user: { id: userId } },
+      });
+      if (!ownedAccount) throw new ApiError("Account not found", 404);
 
       let account: Account | null = null;
       let sourceAccount: Account | null = null;
 
       // 1. Concurrency deadlocking prevention via deterministic locking order
       if (sourceAccountId && sourceAccountId.trim()) {
+        const ownedSource = await accountRepo.findOne({
+          where: { id: sourceAccountId, user: { id: userId } },
+        });
+        if (!ownedSource) throw new ApiError("Account not found", 404);
+
         const sortedIds = [accountId, sourceAccountId].sort();
         const firstId = sortedIds[0];
         const secondId = sortedIds[1];
@@ -143,9 +159,11 @@ export class TransactionService {
       }
 
       const categoryRepo = manager.getRepository(TransactionCategory);
-      const category = await categoryRepo.findOne({ where: { id: categoryId, isActive: true } });
+      const category = await categoryRepo.findOne({
+        where: { id: categoryId, isActive: true, user: { id: userId } },
+      });
       if (!category) {
-        throw new Error(`Category with id ${categoryId} not found.`);
+        throw new ApiError("Category not found", 404);
       }
 
       // Generate a unique identifier for linked transfer legs
@@ -158,11 +176,14 @@ export class TransactionService {
         description: sourceAccount ? `Payment from ${sourceAccount.name}${description ? ' - ' + description : ''}` : description,
         transactionDate,
         account,
+        user,
+        userId: user.id,
         transferGroupId,
       });
 
       await accountRepo.save(account);
       const savedTransaction = await transactionRepo.save(transaction);
+      delete (savedTransaction as { user?: User }).user;
       
       let savedSourceTransaction = null;
       if (sourceAccount) {
@@ -173,6 +194,8 @@ export class TransactionService {
           description: `Payment to ${account.name}`,
           transactionDate,
           account: sourceAccount,
+          user,
+          userId: user.id,
           transferGroupId,
         });
         savedSourceTransaction = await transactionRepo.save(sourceTransaction);
@@ -187,6 +210,7 @@ export class TransactionService {
 
   static async getTransactions(query: GetTransactionsQuery) {
     const {
+      userId,
       page,
       limit,
       type,
@@ -206,8 +230,10 @@ export class TransactionService {
 
     const qb = AppDataSource.getRepository(Transaction)
       .createQueryBuilder("transaction")
+      .innerJoin("transaction.user", "owner")
       .leftJoinAndSelect("transaction.account", "account")
-      .leftJoinAndSelect("transaction.category", "category");
+      .leftJoinAndSelect("transaction.category", "category")
+      .where("owner.id = :userId", { userId });
 
     if (accountId) {
       qb.andWhere("account.id = :accountId", { accountId });
@@ -256,7 +282,7 @@ export class TransactionService {
     };
   }
 
-  static async deleteTransaction(transactionId: string) {
+  static async deleteTransaction(transactionId: string, userId: string) {
     if (!transactionId || !transactionId.trim()) {
       throw new Error("Transaction ID is required.");
     }
@@ -267,11 +293,11 @@ export class TransactionService {
 
       // Fetch transaction with NO lock first to get accountId and transferGroupId
       const transactionPlain = await transactionRepo.findOne({
-        where: { id: transactionId },
+        where: { id: transactionId, user: { id: userId } },
       });
 
       if (!transactionPlain) {
-        throw new Error("Transaction not found.");
+        throw new ApiError("Transaction not found", 404);
       }
 
       const transferGroupId = transactionPlain.transferGroupId;
@@ -279,20 +305,27 @@ export class TransactionService {
       if (transferGroupId) {
         // Fetch all transactions under this transfer group
         const transferTransactions = await transactionRepo.find({
-          where: { transferGroupId },
+          where: { transferGroupId, user: { id: userId } },
         });
+
+        if (transferTransactions.length === 0) {
+          throw new ApiError("Transaction not found", 404);
+        }
 
         // Ensure deterministic locking order for all unique accounts involved
         const uniqueAccountIds = Array.from(new Set(transferTransactions.map(t => t.accountId))).sort();
         const accountsMap: Record<string, Account> = {};
 
         for (const accId of uniqueAccountIds) {
+          const owned = await accountRepo.findOne({
+            where: { id: accId, user: { id: userId } },
+          });
           const acc = await accountRepo.findOne({
             where: { id: accId },
             lock: { mode: "pessimistic_write" },
           });
-          if (!acc) {
-            throw new Error(`Account associated with transfer was not found.`);
+          if (!acc || !owned) {
+            throw new ApiError("Account not found", 404);
           }
           accountsMap[accId] = acc;
         }
@@ -301,7 +334,7 @@ export class TransactionService {
         const lockedTransactions = [];
         for (const t of transferTransactions) {
           const lockedT = await transactionRepo.findOne({
-            where: { id: t.id },
+            where: { id: t.id, userId },
             lock: { mode: "pessimistic_write" },
           });
           if (lockedT) {
@@ -342,18 +375,21 @@ export class TransactionService {
       const accountId = transactionPlain.accountId;
 
       // Lock account row
+      const ownedAccount = await accountRepo.findOne({
+        where: { id: accountId, user: { id: userId } },
+      });
       const account = await accountRepo.findOne({
         where: { id: accountId },
         lock: { mode: "pessimistic_write" },
       });
 
-      if (!account) {
-        throw new Error("Account not found.");
+      if (!account || !ownedAccount) {
+        throw new ApiError("Account not found", 404);
       }
 
       // Lock transaction row
       const transaction = await transactionRepo.findOne({
-        where: { id: transactionId },
+        where: { id: transactionId, userId },
         lock: { mode: "pessimistic_write" },
       });
 

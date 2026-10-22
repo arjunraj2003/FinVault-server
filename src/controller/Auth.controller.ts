@@ -30,9 +30,16 @@ export class AuthController {
             const hashedPassword = await AuthService.hashPassword(password);
             const user = await UserService.createUser(name, email, hashedPassword);
 
+            const accessToken = AuthService.generateAccessToken(user.id);
+            const refreshToken = AuthService.generateRefreshToken(user.id);
+            res.cookie("refreshToken", refreshToken, cookieOptions);
+
             return res
                 .status(201)
-                .json(new ApiResponse(true, "User registered", instanceToPlain(user)));
+                .json(new ApiResponse(true, "User registered", {
+                    user: instanceToPlain(user),
+                    accessToken,
+                }));
         } catch (err) {
             next(err);
         }

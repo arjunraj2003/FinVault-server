@@ -3,6 +3,7 @@ import { AppDataSource } from "../config/data-source";
 import { ApiResponse } from "../utils/apiResponse";
 import { generateSQL, generateExplanation, isAIServiceUnavailable } from "./aiService";
 import { safeAIQuery } from "./safeQuery";
+import { getAuthUserId } from "../middlewares/auth.middleware";
 import Fuse from "fuse.js";
 
 // ── Category aliases map ───────────────────────────────────────
@@ -93,7 +94,7 @@ export class ChatController {
     static async chat(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { question } = req.body;
-            const userId = (req as any).user.userId;
+            const userId = getAuthUserId(req);
 
             if (!question || typeof question !== "string" || !question.trim()) {
                 res.status(400).json(new ApiResponse(false, "question is required.", null));
@@ -105,12 +106,12 @@ export class ChatController {
 
             // ✅ If AI service handled it directly (greeting/unknown intent)
             // sql will be null and explanation will be present
-            if (!pass1.sql && pass1.explanation) {
+            if (!pass1.sql) {
                 res.status(200).json(new ApiResponse(true, "Chat response generated successfully", {
                     question,
                     sql: null,
                     results: [],
-                    explanation: pass1.explanation,
+                    explanation: pass1.explanation ?? "I couldn't turn that into a finance query.",
                 }));
                 return;
             }
@@ -125,7 +126,7 @@ export class ChatController {
             let sqlError: string | undefined;
 
             try {
-                results = await safeAIQuery(AppDataSource, pass1.sql);
+                results = await safeAIQuery(AppDataSource, pass1.sql, userId);
             } catch (err) {
                 sqlError = (err as Error).message;
             }

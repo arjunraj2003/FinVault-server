@@ -2,43 +2,35 @@ import { Request, Response, NextFunction } from "express";
 import { ApiError } from "../utils/apiError";
 import { verifyAccessToken } from "../utils/token";
 
-export interface AuthRequest extends Request{
+export interface AuthRequest extends Request {
     user?: {
-        id: string,
-        name?: string,
-        role: string,
-        email?:string
-    }
+        userId: string;
+    };
 }
 
 export const authenticate = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
-    if(!authHeader || !authHeader.startsWith("Bearer " )){
-        throw new ApiError('Token missing', 401);
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return next(new ApiError("Token missing", 401));
     }
 
     try {
         const token = authHeader.split(" ")[1];
-        const decoded = verifyAccessToken(token);
-        console.log("=== AUTH DEBUG ===");
-        console.log("decoded:", JSON.stringify(decoded));
-        console.log("==================");
-        if(!decoded){
-            return next(new ApiError('Invalid or expired token', 401))
+        const decoded = verifyAccessToken(token) as { userId?: string } | undefined;
+        if (!decoded?.userId || typeof decoded.userId !== "string") {
+            return next(new ApiError("Invalid or expired token", 401));
         }
-        (req as any).user = decoded;
-        next()
+        (req as AuthRequest).user = { userId: decoded.userId };
+        next();
     } catch (error) {
-        return next(new ApiError('Invalid or expired token', 401))
+        return next(new ApiError("Invalid or expired token", 401));
     }
-}
-
-export const authorize = (...roles: string[]) => {
-  return (req: AuthRequest, res: Response, next: NextFunction): void => {
-    if (!req.user || !roles.includes(req.user.role)) {
-      res.status(403).json({ message: 'Forbidden: Access denied' });
-      return;
-    }
-    next();
-  };
 };
+
+export function getAuthUserId(req: object): string {
+    const userId = (req as AuthRequest).user?.userId;
+    if (!userId) {
+        throw new ApiError("Unauthorized", 401);
+    }
+    return userId;
+}

@@ -32,7 +32,8 @@ export class Budget {
     createdAt!: Date;
 
     @ManyToOne(() => User, (user) => user.budgets, {
-        onDelete: "CASCADE"
+        onDelete: "CASCADE",
+        nullable: false,
     })
     user!: User;
 }

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { DashboardService } from "../service/Dashboard.service";
 import { ApiResponse } from "../utils/apiResponse";
+import { getAuthUserId } from "../middlewares/auth.middleware";
 
 export class DashboardController {
 
@@ -16,7 +17,8 @@ export class DashboardController {
       const data = await DashboardService.getDashboardSummary(
         accountId as string,
         Number(year),
-        Number(month)
+        Number(month),
+        getAuthUserId(req)
       );
 
       res.status(200).json(

@@ -5,6 +5,7 @@ import {
 } from "../service/Transaction.service";
 import { ApiResponse } from "../utils/apiResponse";
 import { TransactionType } from "../utils/transaction-category.enum";
+import { getAuthUserId } from "../middlewares/auth.middleware";
 
 
 // ---------------------------------------------------------------------------
@@ -122,6 +123,7 @@ export class TransactionController {
       }
 
       const result = await TransactionService.createTransaction(
+        getAuthUserId(req),
         type,
         amt,
         accountId.trim(),
@@ -203,6 +205,7 @@ export class TransactionController {
 
       // Build a fully-typed query object — no `any` reaches the service layer.
       const serviceQuery: GetTransactionsQuery = {
+        userId: getAuthUserId(req),
         page: page as number,
         limit: limit as number,
         type: rawType as TransactionType | undefined,
@@ -236,7 +239,10 @@ export class TransactionController {
         if (badRequest(res, "transactionId param is required.")) return;
       }
 
-      const result = await TransactionService.deleteTransaction(transactionId.trim());
+      const result = await TransactionService.deleteTransaction(
+        transactionId.trim(),
+        getAuthUserId(req)
+      );
 
       res.status(200).json(new ApiResponse(true, result.message));
     } catch (error) {

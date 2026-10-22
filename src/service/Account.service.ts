@@ -2,6 +2,7 @@ import { AppDataSource } from "../config/data-source"
 import { Account, AccountType } from "../entity/account.entity"
 import { User } from "../entity/user.entity"
 import { CreditCardDetails } from "../entity/CreditCardDetails.entity"
+import { ApiError } from "../utils/apiError"
 
 export interface CreateCreditCardDto {
     creditLimit: string;
@@ -53,19 +54,25 @@ export class AccountService {
                 statementDay: creditCardInfo.statementDay,
                 dueDay: creditCardInfo.dueDay,
                 interestRate: creditCardInfo.interestRate,
+                user,
+                userId: user.id,
             } as CreditCardDetails;
         }
 
         await accountRepo.save(account);
+        if (account.creditCardDetails) {
+            delete (account.creditCardDetails as { user?: User }).user;
+        }
 
         return account;
     }
 
-    static async getBalanceById(AccountId: string) {
-        const balance = await accountRepo.findOne({ 
-            where: { id: AccountId },
+    static async getBalanceById(AccountId: string, userId: string) {
+        const balance = await accountRepo.findOne({
+            where: { id: AccountId, user: { id: userId } },
             relations: ["creditCardDetails"]
         })
+        if (!balance) throw new ApiError("Account not found", 404)
         return balance
     }
 

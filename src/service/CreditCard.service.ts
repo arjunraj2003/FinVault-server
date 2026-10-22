@@ -39,6 +39,7 @@ export class CreditCardService {
         const recentTransactions = await transactionRepo.find({
             where: {
                 account: { id: accountId },
+                user: { id: userId },
                 transactionDate: MoreThanOrEqual(cycleStartDate)
             }
         });
@@ -56,7 +57,7 @@ export class CreditCardService {
         }
 
         const statements = await statementRepo.find({
-            where: { accountId: accountId },
+            where: { accountId: accountId, user: { id: userId } },
             order: { statementDate: "DESC" }
         });
 
