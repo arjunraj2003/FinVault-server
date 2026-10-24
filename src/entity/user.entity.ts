@@ -12,6 +12,8 @@ import { TransactionCategory } from "./TransactionCategory.entity";
 import { CreditCardDetails } from "./CreditCardDetails.entity";
 import { CreditCardStatement } from "./CreditCardStatement.entity";
 import { WebAuthnCredential } from "./webauthn-credential.entity";
+import { PushSubscription } from "./push-subscription.entity";
+import { NotificationLog } from "./notification-log.entity";
 import { Exclude } from "class-transformer";
 
 
@@ -54,4 +56,12 @@ export class User {
     @Exclude()
     @OneToMany(() => WebAuthnCredential, (credential) => credential.user)
     webauthnCredentials!: WebAuthnCredential[];
+
+    @Exclude()
+    @OneToMany(() => PushSubscription, (subscription) => subscription.user)
+    pushSubscriptions!: PushSubscription[];
+
+    @Exclude()
+    @OneToMany(() => NotificationLog, (entry) => entry.user)
+    notificationLogs!: NotificationLog[];
 }

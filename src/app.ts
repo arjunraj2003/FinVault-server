@@ -7,6 +7,7 @@ import dashboardRoutes from './routes/dashboard.routes';
 import budgetRoutes from './routes/budget.routes';
 import categoryROutes from './routes/category.routes'
 import chatRouter from './ai/chat.router'
+import notificationRoutes from './routes/notification.routes'
 import cookieParser from 'cookie-parser';
 import cors, { CorsOptions } from 'cors';
 import morgan from "morgan";
@@ -47,6 +48,7 @@ app.use('/api/v1/dashboard',dashboardRoutes)
 app.use('/api/v1/budget',budgetRoutes)
 app.use('/api/v1/chat',chatRouter)
 app.use('/api/v1/category',categoryROutes)
+app.use('/api/v1/notifications',notificationRoutes)
 
 app.use(errorHandler);
 

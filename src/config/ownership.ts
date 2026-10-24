@@ -9,6 +9,8 @@ import { TransactionCategory } from "../entity/TransactionCategory.entity";
 import { CreditCardDetails } from "../entity/CreditCardDetails.entity";
 import { CreditCardStatement } from "../entity/CreditCardStatement.entity";
 import { WebAuthnCredential } from "../entity/webauthn-credential.entity";
+import { PushSubscription } from "../entity/push-subscription.entity";
+import { NotificationLog } from "../entity/notification-log.entity";
 
 dotenv.config();
 
@@ -231,6 +233,8 @@ export async function ensureRowLevelSecurity() {
         CreditCardDetails,
         CreditCardStatement,
         WebAuthnCredential,
+        PushSubscription,
+        NotificationLog,
     ];
 
     for (const entity of entities) {

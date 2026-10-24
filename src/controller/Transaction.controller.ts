@@ -6,6 +6,7 @@ import {
 import { ApiResponse } from "../utils/apiResponse";
 import { TransactionType } from "../utils/transaction-category.enum";
 import { getAuthUserId } from "../middlewares/auth.middleware";
+import { NotificationService } from "../service/Notification.service";
 
 
 // ---------------------------------------------------------------------------
@@ -122,8 +123,9 @@ export class TransactionController {
         if (badRequest(res, "transactionDate is not a valid date.")) return;
       }
 
+      const userId = getAuthUserId(req);
       const result = await TransactionService.createTransaction(
-        getAuthUserId(req),
+        userId,
         type,
         amt,
         accountId.trim(),
@@ -132,6 +134,14 @@ export class TransactionController {
         parsedDate,
         sourceAccountId?.trim()
       );
+
+      if (type === TransactionType.DEBIT || sourceAccountId?.trim()) {
+        try {
+          await NotificationService.notifyBudgetThresholds(userId, categoryId, parsedDate);
+        } catch (error) {
+          console.error("Budget notification failed", error);
+        }
+      }
 
       res
         .status(201)
