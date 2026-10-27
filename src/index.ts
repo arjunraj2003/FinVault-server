@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import app from "./app";
 import { AppDataSource } from "./config/data-source";
+import { ensureNotificationTables } from "./config/notification-tables";
 import { ensureRowLevelSecurity, prepareOwnership } from "./config/ownership";
 // import { redisClient } from "./config/redis-connet";
 
@@ -12,6 +13,7 @@ async function startServer() {
     await prepareOwnership();
     await AppDataSource.initialize();
     console.log("Database connected");
+    await ensureNotificationTables();
     await ensureRowLevelSecurity();
 
     // 2. Connect Redis
