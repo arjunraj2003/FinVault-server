@@ -44,7 +44,6 @@ export class Account {
     transactions!: Transaction[];
 
     @OneToOne(() => CreditCardDetails, (details) => details.account, {
-        cascade: true,
         nullable: true,
     })
     creditCardDetails?: CreditCardDetails;

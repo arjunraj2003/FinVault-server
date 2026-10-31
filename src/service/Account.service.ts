@@ -13,14 +13,13 @@ export interface CreateCreditCardDto {
 
 const accountRepo = AppDataSource.getRepository(Account)
 const userRepo = AppDataSource.getRepository(User)
+const detailsRepo = AppDataSource.getRepository(CreditCardDetails)
 export class AccountService {
     static async createAccount(userId: string, name: string, type: AccountType, balance: string, creditCardInfo?: CreateCreditCardDto) {
 
         const user = await userRepo.findOne({ where: { id: userId } })
         if (!user) throw new Error("User is not existing")
-        console.log(balance)
         const parsedBalance = Number(balance);
-        console.log(parsedBalance)
         if (isNaN(parsedBalance)) {
             throw new Error("Invalid balance amount");
         }
@@ -41,27 +40,26 @@ export class AccountService {
             throw new Error("Account with this name already exists");
         }
 
-        const account = accountRepo.create({
+        const account = await accountRepo.save(accountRepo.create({
             name,
             type,
             balance: initialBalance.toString(),
             user,
-        });
+        }));
 
         if (type === AccountType.CREDIT && creditCardInfo) {
-            account.creditCardDetails = {
+            const details = await detailsRepo.save(detailsRepo.create({
                 creditLimit: creditCardInfo.creditLimit,
                 statementDay: creditCardInfo.statementDay,
                 dueDay: creditCardInfo.dueDay,
                 interestRate: creditCardInfo.interestRate,
+                account,
+                accountId: account.id,
                 user,
                 userId: user.id,
-            } as CreditCardDetails;
-        }
-
-        await accountRepo.save(account);
-        if (account.creditCardDetails) {
-            delete (account.creditCardDetails as { user?: User }).user;
+            }));
+            delete (details as { user?: User }).user;
+            account.creditCardDetails = details;
         }
 
         return account;
